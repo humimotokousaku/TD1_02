@@ -34,7 +34,7 @@ enum EnemyPersonPattern {
 	BACKSTEP_P,
 	// 攻撃
 	THOUNDER_P,
-	NORMAL_P,	
+	NORMAL_P,
 	BEHINDATTACK_P,
 	LONGRANGE_P,
 	RANGEATTACK_P
@@ -784,7 +784,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓更新処理ここから
 		///
-		// タイトル、ゲームオーバー、クリア画面以外でplayerを動かせる
+// タイトル、ゲームオーバー、クリア画面以外でplayerを動かせる
 #pragma region player
 // playerの移動キー
 // 左に移動
@@ -922,7 +922,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 			break;
 		case FIRSTENEMY:
-			
+
 #pragma region 没データ
 #pragma region デバッグ用のキー
 			if (!keys[DIK_1] && preKeys[DIK_1]) {
@@ -1258,7 +1258,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				behindAttack.translate.y = normalAttack.translate.y;
 			}
 
-#pragma region enemyの行動パターン
+#pragma region 行動パターン
 			// 何もしない
 			if (enemyPersonPattern == NONE_P) {
 				enemyPerson.speed.y = -10.0f;
@@ -1390,6 +1390,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 
 #pragma region 攻撃パターン
+
+#pragma region 近接攻撃
 			// 近接攻撃ここから↓
 			if (enemyPersonPattern == NORMAL_P) {
 				normalAttack.frame++;
@@ -1452,6 +1454,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			// 近接攻撃ここまで↑
 
+#pragma endregion
+
+#pragma region 背後から攻撃
 			// 背後から攻撃
 			if (enemyPersonPattern == BEHINDATTACK_P) {
 				behindAttack.frame++;
@@ -1519,6 +1524,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					behindAttack.frame = 0;
 				}
 			}
+
+#pragma endregion
+
+#pragma region 遠距離攻撃
 			// 遠距離攻撃
 			if (enemyPersonPattern == LONGRANGE_P) {
 				longAttack.frame++;
@@ -1550,6 +1559,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				longAttack.translate.x = enemyPerson.translate.x;
 				longAttack.translate.y = enemyPerson.translate.y;
 			}
+#pragma endregion
+
+#pragma region 範囲攻撃
 			// 範囲攻撃
 			if (enemyPersonPattern == RANGEATTACK_P) {
 				rangeAttack.frame++;
@@ -1591,6 +1603,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				rangeAttack.drawSwordPos.x = enemyPerson.translate.x;
 				rangeAttack.drawSwordPos.y = enemyPerson.translate.y;
 			}
+#pragma endregion
+
+#pragma region 衝撃波
 			// 衝撃波
 			if (enemyPersonPattern == SHOCKWAVE_P) {
 				/// ジャンプの処理ここから↓
@@ -1695,6 +1710,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				shockWaveJumpPos.y = enemyPerson.translate.y;
 				count = 0;
 			}
+#pragma endregion
+
+#pragma region 落雷
 			// 落雷
 			// playerとenemy間のthetaを取得
 			thounder[thounderCount].theta = atan2(player.translate.y - thounder[thounderCount].translate.y, player.translate.x - thounder[thounderCount].translate.x);
@@ -1761,7 +1779,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 			}
 #pragma endregion
-
+			// 攻撃パターンのendregion
+#pragma endregion
+// 行動パターンのendregion
 #pragma endregion
 			/********各キャラの体力がなくなると死亡********/
 			// player
@@ -1828,7 +1848,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				behindAttack.translate.y = normalAttack.translate.y;
 			}
 			isSecondForm = true;
-#pragma region enemyの行動パターン
+#pragma region 行動パターン
 			// 何もしない
 			if (enemyPersonPattern == NONE_P) {
 				// 地面まで引きずり落とす
@@ -1838,7 +1858,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				if (enemyPerson.translate.y <= enemyPerson.size) {
 					enemyPerson.translate.y = enemyPerson.size;
 					NoneTime--;
-				}	
+				}
 				normalAttack.color = WHITE;
 				normalAttack.isAttack = false;
 				//// enemyがスタンしたとき硬直を長くする
@@ -1962,7 +1982,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 
 #pragma region 攻撃パターン
-			// 近接攻撃ここから↓
+
+#pragma region 近接攻撃
 			if (enemyPersonPattern == NORMAL_P) {
 				normalAttack.frame++;
 				normalAttack.isAttack = false;
@@ -2019,8 +2040,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					normalAttack.frame = 0;
 				}
 			}
-			// 近接攻撃ここまで↑
+#pragma endregion
 
+#pragma region 背後から攻撃
 			// 背後から攻撃
 			if (enemyPersonPattern == BEHINDATTACK_P) {
 				behindAttack.frame++;
@@ -2084,6 +2106,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					behindAttack.frame = 0;
 				}
 			}
+#pragma endregion
+
+#pragma region 遠距離攻撃
 			// 遠距離攻撃
 			if (enemyPersonPattern == LONGRANGE_P) {
 				longAttack.frame++;
@@ -2116,6 +2141,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				longAttack.translate.y = enemyPerson.translate.y;
 				longAttack.speed.x = 20.0f;
 			}
+#pragma endregion
+
+#pragma region 範囲攻撃
 			// 範囲攻撃
 			if (enemyPersonPattern == RANGEATTACK_P) {
 				rangeAttack.frame++;
@@ -2157,6 +2185,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				rangeAttack.drawSwordPos.x = enemyPerson.translate.x;
 				rangeAttack.drawSwordPos.y = enemyPerson.translate.y;
 			}
+#pragma endregion 
+
+#pragma region 衝撃波
 			// 衝撃波
 			if (enemyPersonPattern == SHOCKWAVE_P) {
 				if (count == 0) {
@@ -2257,6 +2288,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				shockWaveJumpPos.y = enemyPerson.translate.y;
 				count = 0;
 			}
+#pragma endregion
+
+#pragma region 落雷
 			// 落雷
 			// playerとenemy間のthetaを取得
 			thounder[thounderCount].theta = atan2(player.translate.y - thounder[thounderCount].translate.y, player.translate.x - thounder[thounderCount].translate.x);
@@ -2264,9 +2298,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				if (!teleport.isTeleport && thounder[thounderCount].frame == 0) {
 					teleport.frame = 1;
 				}
-				if (thounder[0].frame == 0) {			
+				if (thounder[0].frame == 0) {
 					teleport.frame++;
-				}	
+				}
 				if (teleport.frame >= 1 && teleport.frame <= 20) {
 					teleport.isTeleport = true;
 				}
@@ -2282,8 +2316,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					thounder[thounderCount].frame++;
 				}
 
-				
-				
+
+
 				if (thounder[thounderCount].frame >= 40 && thounder[thounderCount].frame <= 43) {
 					thounder[thounderCount].isThounder = true;
 				}
@@ -2321,9 +2355,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 						thounder[thounderCount].translate.x += (cosf(thounder[thounderCount].theta) * thounder[thounderCount].speed.x);
 					}
 				}
-				
-			}
 
+			}
+#pragma endregion
+
+#pragma region 閃光弾
 			// 閃光弾
 			if (enemyPersonPattern == FLASH_P) {
 				flash.frame++;
@@ -2378,7 +2414,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				player.isShortStun = false;
 			}
 #pragma endregion
-
+			// 攻撃パターンのendregion
+#pragma endregion 
+// enemyの行動パターンのendregion
 #pragma endregion
 			// player
 			if (player.hp <= 0) {
