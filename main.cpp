@@ -13,6 +13,8 @@ const int kWindowHeight = 720;
 // 中型
 enum EnemyMediumPattern {
 	NONE_M,
+	TAKEOFF_M,
+	TACKLE_M,
 	EXPLODE_M,
 	CRUSH_M,
 	LONGATTACK_M,
@@ -24,17 +26,18 @@ int enemyMediumPattern = NONE_M;
 enum EnemyPersonPattern {
 	// 攻撃するまでに必要な移動
 	NONE_P,
-	JUMP_P,
-	BACKSTEP_P,
 	DUSH_P,
 	TELEPORT_P,
 	SHOCKWAVE_P,// 攻撃も移動も含んでる
+	JUMP_P,
+	BACKSTEP_P,
 	// 攻撃
 	NORMAL_P,
 	BEHINDATTACK_P,
 	LONGRANGE_P,
 	RANGEATTACK_P,
-	THOUNDER_P
+	THOUNDER_P,
+	FLASH_P
 };
 int enemyPersonPattern = NONE_P;
 
@@ -70,7 +73,13 @@ typedef struct Vector2 {
 	float x;
 	float y;
 };
-
+// シェイク
+typedef struct Shake {
+	Vector2 randPos;
+	int randLength;
+	int offset;// randの最小値
+	int isShake;
+};
 #pragma region player
 // player
 typedef struct Player {
@@ -83,6 +92,8 @@ typedef struct Player {
 	int isParry;
 	int isJump;
 	int jumpCount;
+	int isLongStun;
+	int isShortStun;
 	int isMultiHit;
 	unsigned int color;
 };
@@ -104,7 +115,8 @@ typedef struct PlayerAttack {
 typedef struct EnemyMedium {
 	Vector2 translate;
 	Vector2 speed;
-	Vector2 acceleration;
+	float endTime;
+	float endSpeed;
 	float size;
 	float theta;
 	int hp;
@@ -130,6 +142,7 @@ typedef struct Explode {
 typedef struct LongAttackM {
 	Vector2 translate;
 	Vector2 speed;
+	float theta;
 	float size;
 	int frame;
 	int animCount;
@@ -140,14 +153,35 @@ typedef struct LongAttackM {
 // ビーム
 typedef struct Beam {
 	Vector2 translate;
-	float size;
+	Vector2 size;
 	float endTime;
 	float endSpeed;
+	int count;
 	int frame;
 	int animCount;
 	int isAttack;
 	int isMultiHit;
 	unsigned int color;
+};
+// 浮上
+typedef struct Takeoff {
+	Vector2 translate;
+	Vector2 speed;
+	float endTime;
+	float endSpeed;
+	int frame;
+	int isTakeoff;
+};
+// タックル
+typedef struct Tackle {
+	Vector2 translate;
+	Vector2 speed;
+	float theta;
+	float amplitude;
+	float endTime;
+	float endSpeed;
+	int frame;
+	int isTackle;
 };
 #pragma endregion
 
@@ -158,6 +192,7 @@ typedef struct EnemyPerson {
 	Vector2 speed;
 	Vector2 acceleration;
 	float size;
+	float theta;
 	int hp;
 	int isAlive;
 	int isJump;
@@ -223,12 +258,28 @@ typedef struct BehindAttack {
 // 空中攻撃
 typedef struct Thounder {
 	Vector2 translate;
+	Vector2 speed;
 	float size;
+	float theta;
 	int frame;
 	int animCount;
 	int isThounder;
 	int isMultiHit;
 	unsigned int color;
+};
+// 閃光弾
+typedef struct Flash {
+	Vector2 translate;
+	Vector2 speed;
+	float size;
+	float theta;
+	float endTime;
+	float endSpeed;
+	int frame;
+	int animCount;
+	int isFlash;
+	int carrentAlpha;
+	int color;
 };
 #pragma endregion
 #pragma region 移動パターン
@@ -274,6 +325,7 @@ typedef struct BackStep {
 #pragma endregion
 
 #pragma endregion
+
 // 関数
 // だんだん早くなる(EaseIn)
 void EaseIn(float& scale, float& scaleSpeed, float& radius, float firstRadius, float endRadius) {
@@ -370,6 +422,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int attackGh = Novice::LoadTexture("white1x1.png");
 
 	/**********宣言**********/
+#pragma region シェイク
+	// シェイク
+	Shake shake = {
+		{0.0f,0.0f},
+		61,
+		-30,
+		false
+	};
+	// 乱数
+	// 移動パターンの乱数
+	unsigned int currentGameTime = time(nullptr);
+	srand(currentGameTime);
+#pragma endregion
+
 #pragma region player
 	// 本体
 	Player player = {
@@ -382,6 +448,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		false,		 // パリィしているか
 		false,		 // ジャンプしてるか
 		0,			 // ジャンプした数
+		false,
+		false,
 		false,		 // 多段ヒット防止
 		BLUE		 // 色
 	};
@@ -405,6 +473,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{6.0f,0.0f},
 		{0.0f,-0.8f},
 		64.0f,
+		0.0f,
 		10,
 		true,
 		false,
@@ -481,7 +550,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	for (int i = 0; i < 10; i++) {
 		thounder[i] = {
 				{100.0f * i + 1,kWindowHeight / 2},
+				{100.0f,100.0f},
 				64.0f,
+				0.0f,
 				0,
 				0,
 				false,
@@ -490,6 +561,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		};
 	}
 	int thounderCount = 0;
+	// 閃光弾
+	Flash flash = {
+		{0.0f,0.0f},
+		{6.0f,14.0f},
+		16.0f,
+		0.0f,
+		0.0f,
+		1.0f / 50.0f,
+		0,
+		0,
+		false,
+		0xff,
+		WHITE
+	};
+	int isMultiHit = false;
 	/**************enemyの移動パターン**************/
 	// enemyが何もしないとき
 	int NoneTime = 120;
@@ -541,7 +627,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	EnemyMedium enemyMedium = {
 		{kWindowWidth / 2,kWindowHeight - 64.0f},
 		{6.0f,6.0f},
-		{0.0f,-0.8f},
+		0.0f,
+		1.0f / 20.0f,
 		64.0f,
 		0.0f,
 		10,
@@ -550,9 +637,30 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		false,
 		BLACK
 	};
-	int isTakeOff = false;
+	int isSecondForm = false;
 	int crushFrame = 0;
 	int crushCount = 0;
+	// 浮上
+	Takeoff takeoff = {
+		{0.0f,0.0f},
+		{2.0f,2.0f},
+		0.0f,
+		1.0f / 40.0f,
+		0,
+		false
+	};
+	const float defaultPosY = kWindowHeight - enemyMedium.size * 2;
+	// タックル
+	Tackle tackle = {
+		{enemyMedium.size,kWindowHeight / 2},
+		{4.0f,4.0f},
+		0.0f,
+		kWindowHeight - enemyMedium.size,
+		0.0f,
+		1.0f / 40.0f,
+		0,
+		false
+	};
 	// 爆発
 	Explode explode = {
 		{0.0f,0.0f},
@@ -567,34 +675,45 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		WHITE
 	};
 	// 遠距離
-	LongAttackM longAttackM[5] = {
-		{0.0f,0.0f},
-		{8.0f,8.0f},
-		32.0f,
-		0,
-		0,
-		false,
-		false,
-		WHITE
-	};
+	LongAttackM longAttackM[5];
+	for (int i = 0; i < 5; i++) {
+		longAttackM[i] = {
+			{100.0f,100.0f * i},
+			{8.0f,8.0f},
+			0.0f,
+			32.0f,
+			0,
+			0,
+			false,
+			false,
+			WHITE
+		};
+	}
+	int longCount = 0;
 	// 範囲攻撃
 	Beam beam = {
-		{0.0f,0.0f},
-		32.0f,
+		{kWindowWidth / 2,0.0f},
+		{kWindowWidth / 2,64.0f},
 		0.0f,
-		1.0f / 30.0f,
+		1.0f / 10.0f,
+		0,
 		0,
 		0,
 		false,
 		false,
 		WHITE
 	};
+	int isLL = false;
+	int isLR = false;
+
+	int isRL = false;
+	int isRR = false;
 #pragma endregion
+
 	//// playerとenemyの距離
 	//Vector2 e2p = {
 	//	0.0f,0.0f
 	//};
-
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -612,35 +731,36 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma region player
 	// playerの移動キー
 	// 左に移動
-		if (keys[DIK_A]) {
-			player.translate.x -= player.speed.x;
-			playerDir = LEFT;
-		}
-		// 右に移動
-		if (keys[DIK_D]) {
-			player.translate.x += player.speed.x;
-			playerDir = RIGHT;
-		}
-		// ジャンプのキー
-		if (!keys[DIK_W] && preKeys[DIK_W]) {
-			player.jumpCount++;
-			// 最初のジャンプ
-			if (player.jumpCount == 1) {
-				// ジャンプの初速
-				player.speed.y = 20.0f;
-				player.isJump = true;
+		if (!player.isLongStun) {
+			if (keys[DIK_A]) {
+				player.translate.x -= player.speed.x;
+				playerDir = LEFT;
 			}
-			// 2段ジャンプ(1段目より高く飛べない)
-			if (player.jumpCount == 2) {
-				player.speed.y = 17.0f;
-				player.isJump = true;
+			// 右に移動
+			if (keys[DIK_D]) {
+				player.translate.x += player.speed.x;
+				playerDir = RIGHT;
+			}
+			// ジャンプのキー
+			if (!keys[DIK_W] && preKeys[DIK_W]) {
+				player.jumpCount++;
+				// 最初のジャンプ
+				if (player.jumpCount == 1) {
+					// ジャンプの初速
+					player.speed.y = 20.0f;
+					player.isJump = true;
+				}
+				// 2段ジャンプ(1段目より高く飛べない)
+				if (player.jumpCount == 2) {
+					player.speed.y = 17.0f;
+					player.isJump = true;
+				}
+			}
+			// 近接攻撃のキー
+			if (!keys[DIK_SPACE] && preKeys[DIK_SPACE] && !playerAttack.isAttack) {
+				playerAttack.isAttack = true;
 			}
 		}
-		// 近接攻撃のキー
-		if (!keys[DIK_SPACE] && preKeys[DIK_SPACE] && !playerAttack.isAttack) {
-			playerAttack.isAttack = true;
-		}
-
 		// playerの向きによって攻撃位置を変える
 		if (playerDir == LEFT) {
 			playerAttack.translate.x = player.translate.x - playerAttack.size * 3;
@@ -753,6 +873,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			if (!keys[DIK_3] && preKeys[DIK_3]) {
 				scene = LASTENEMY1;
 			}
+			if (!keys[DIK_4] && preKeys[DIK_4]) {
+				scene = LASTENEMY2;
+			}
 #pragma endregion
 			break;
 		case FIRSTENEMY:
@@ -762,6 +885,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			if (!keys[DIK_2] && preKeys[DIK_2]) {
 				enemyMediumPattern = CRUSH_M;
+			}
+			if (!keys[DIK_3] && preKeys[DIK_3]) {
+				enemyMediumPattern = BEAM_M;
+			}
+			if (!keys[DIK_4] && preKeys[DIK_4]) {
+				enemyMediumPattern = LONGATTACK_M;
 			}
 #pragma endregion
 
@@ -775,7 +904,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			if (player.translate.x >= enemyMedium.translate.x) {
 				enemyDir = RIGHT_E;
 			}
-			// playerに向きによって攻撃位置を変える
+			// playerに向きによって攻撃位置を変える	
+
 			// enemyが左を向いてるとき
 			if (enemyDir == LEFT_E) {
 				explode.translate.x = enemyMedium.translate.x;
@@ -787,7 +917,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				explode.translate.y = enemyMedium.translate.y;
 			}
 			// enemyの向きの処理ここまで↑
-
 #pragma region enemyの行動パターン
 			// 何もしない
 			if (enemyMediumPattern == NONE_M) {
@@ -799,8 +928,33 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				// 攻撃が終わるごとに2秒硬直
 				if (NoneTime <= 0) {
-					enemyMediumPattern = rand() % 4 + 1;
+					enemyMediumPattern = rand() % 2 + 3;
 					NoneTime = 120;
+				}
+			}
+			// 浮上
+			if (enemyMediumPattern == TAKEOFF_M) {
+				takeoff.frame++;
+				if (takeoff.frame <= 60) {
+
+				}
+				if (takeoff.frame >= 60) {
+					takeoff.isTakeoff = true;
+				}
+				if (takeoff.isTakeoff) {
+					if (takeoff.endTime <= 1.0f) {
+						EaseIn(takeoff.endTime, takeoff.endSpeed, enemyMedium.translate.y, takeoff.translate.y, defaultPosY);
+					}
+
+				}
+				else {
+					takeoff.translate.y = enemyMedium.translate.y;
+				}
+				if (takeoff.endTime >= 1.0f) {
+					takeoff.isTakeoff = false;
+					takeoff.frame = 0;
+					takeoff.endTime = 0.0f;
+					enemyMediumPattern = NONE_M;
 				}
 			}
 			// playerの近くに寄って爆発
@@ -824,14 +978,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				if (explode.frame >= 225) {
 					explode.frame = 0;
 					explode.isAttack = false;
-					enemyMediumPattern = NONE_M;
+					enemyMediumPattern = TAKEOFF_M;
 				}
 			}
 			// playerの真上で90フレーム追尾して落ちてくる
 			if (enemyMediumPattern == CRUSH_M) {
 				crushFrame++;
 				enemyMedium.isAttack = true;
-
 				if (crushFrame <= 90) {
 					enemyMedium.speed.x = 60.0f;
 					enemyMedium.translate.x += (cosf(enemyMedium.theta) * enemyMedium.speed.x);
@@ -849,16 +1002,160 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					crushFrame = 0;
 					enemyMedium.isAttack = false;
 					enemyMedium.speed.y = 6.0f;
-					enemyMediumPattern = NONE_M;
+					enemyMediumPattern = TAKEOFF_M;
 				}
 			}
+			Novice::ScreenPrintf(0, 50, "%f  %f", longAttackM[0].translate.x, longAttackM[0].translate.y);
 			// 遠距離攻撃
 			if (enemyMediumPattern == LONGATTACK_M) {
+				/*if (longAttackM[0].frame <= 120) {
+					longAttackM[0].frame++;
+				}
+				if (longAttackM[longCount].frame >= 10) {
+					longAttackM[longCount].isAttack = true;
+					longCount++;
+				}
+				for (int i = 0; i < 5; i++) {
+					longAttackM[i].theta = atan2(player.translate.y - longAttackM[i].translate.y, player.translate.x - longAttackM[i].translate.x);
 
+					if (longAttackM[i].isAttack) {
+						longAttackM[i].frame++;
+						if (longAttackM[i].frame >= 120 && longAttackM[i].frame <= 160) {
+							longAttackM[i].translate.x += (cosf(longAttackM[i].theta) * 3.5f);
+							longAttackM[i].translate.y += (sinf(longAttackM[i].theta) * 3.5f);
+						}
+						else if (longAttackM[i].frame >= 160) {
+							longAttackM[i].isAttack = false;
+						}
+					}
+					if (longAttackM[4].frame >= 160) {
+						longAttackM[4].isAttack = false;
+						enemyMediumPattern = NONE_M;
+					}
+				}*/
 			}
 			// 範囲攻撃
 			if (enemyMediumPattern == BEAM_M) {
+				beam.frame++;
+				beam.isAttack = false;
+				isLR = false;
+				isLL = false;
+				isRR = false;
+				isRL = false;
+				if (beam.count == 0 || beam.count == 2) {
+					if (beam.frame == 1) {
+						enemyMedium.translate.y = player.translate.y;
+					}
+					if (beam.frame >= 0 && beam.frame <= 30) {
+						isLR = true;
+					}
+					if (beam.frame >= 40 && beam.frame <= 50) {
+						beam.isAttack = true;
+					}
+					if (beam.frame >= 50 && beam.frame <= 60) {
+						isLL = true;
+					}
+				}
+				if (beam.count == 1 || beam.count == 3) {
+					if (beam.frame >= 0 && beam.frame <= 30) {
+						if (beam.frame == 1) {
+							enemyMedium.translate.y = player.translate.y;
+						}
+						isRR = true;
+					}
+					if (beam.frame >= 40 && beam.frame <= 50) {
+						beam.isAttack = true;
+					}
+					if (beam.frame >= 50 && beam.frame <= 60) {
+						isRL = true;
+					}
+				}
+				if (beam.count == 4) {
+					enemyMedium.translate.y = defaultPosY;
+					if (beam.frame <= 90) {
+						enemyMedium.speed.x = 60.0f;
+						enemyMedium.translate.x += (cosf(enemyMedium.theta) * enemyMedium.speed.x);
+					}
+				}
+				if (beam.frame >= 100 && beam.frame <= 130) {
+					beam.isAttack = true;
+				}
 
+				if (isLR) {
+					enemyMedium.endSpeed = 1.0f / 20.0f;
+					if (enemyMedium.endTime <= 1.0f) {
+						EaseIn(enemyMedium.endTime, enemyMedium.endSpeed, enemyMedium.translate.x, -100.0f, enemyMedium.size * 2);
+					}
+				}
+				if (isLL) {
+					enemyMedium.endSpeed = -1.0f / 10.0f;
+					if (enemyMedium.endTime >= 0.0f) {
+						EaseIn(enemyMedium.endTime, enemyMedium.endSpeed, enemyMedium.translate.x, -100.0f, enemyMedium.size * 2);
+					}
+				}
+
+
+				if (isRR) {
+					enemyMedium.endSpeed = 1.0f / 20.0f;
+					if (enemyMedium.endTime <= 1.0f) {
+						EaseIn(enemyMedium.endTime, enemyMedium.endSpeed, enemyMedium.translate.x, kWindowWidth + 100.0f, kWindowWidth - enemyMedium.size * 2);
+					}
+				}
+				if (isRL) {
+					enemyMedium.endSpeed = -1.0f / 10.0f;
+					if (enemyMedium.endTime >= 0.0f) {
+						EaseIn(enemyMedium.endTime, enemyMedium.endSpeed, enemyMedium.translate.x, kWindowWidth + 100.0f, kWindowWidth - enemyMedium.size * 2);
+					}
+				}
+
+				if (beam.count <= 3) {
+					if (beam.frame >= 80) {
+						beam.count++;
+						beam.frame = 0;
+						beam.endTime = 0.0f;
+						enemyMedium.endTime = 0.0f;
+					}
+				}
+				if (beam.count >= 4) {
+					if (beam.frame >= 130) {
+						enemyMedium.speed.y = 6.0f;
+						beam.translate.x = kWindowWidth / 2;
+						beam.isAttack = false;
+						beam.count = 0;
+						beam.frame = 0;
+						beam.endTime = 0.0f;
+						enemyMedium.endTime = 0.0f;
+						enemyMediumPattern = NONE_M;
+					}
+				}
+
+				if (!beam.isAttack) {
+					if (beam.count <= 3) {
+						enemyMedium.speed.y = 10.0f;
+						enemyMedium.translate.y += (sinf(enemyMedium.theta) * enemyMedium.speed.y);
+						beam.translate.y = enemyMedium.translate.y;
+					}
+					if (beam.count == 4) {
+						beam.translate.x = enemyMedium.translate.x;
+					}
+				}
+				// ビーム撃つとき
+				if (beam.isAttack) {
+					// 左右からenemyが出るとき
+					if (beam.count <= 3) {
+						beam.size.x = kWindowWidth / 2;
+						if (beam.endTime <= 1.0f) {
+							EaseIn(beam.endTime, beam.endSpeed, beam.size.y, 0.0f, 64.0f);
+						}
+					}
+					// 最後の一撃
+					if (beam.count == 4) {
+						beam.size.y = kWindowHeight / 2;
+						if (beam.endTime <= 1.0f) {
+							EaseIn(beam.endTime, beam.endSpeed, beam.size.x, 0.0f, 64.0f);
+						}
+					}
+				}
 			}
 #pragma endregion
 
@@ -1166,7 +1463,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				if (enemyPerson.translate.x >= 1300.0f || enemyPerson.translate.x <= -100.0f) {
 					enemyPerson.speed.x = 0.0f;
 				}
-				if (rangeAttack.frame >= 20) {
+				if (rangeAttack.frame >= 25) {
 					rangeAttack.isAttack = true;
 					if (rangeAttack.isAttack) {
 						rangeAttack.color = RED;
@@ -1280,29 +1577,43 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				count = 0;
 			}
 			// 落雷
+			// playerとenemy間のthetaを取得
+			thounder[thounderCount].theta = atan2(player.translate.y - thounder[thounderCount].translate.y, player.translate.x - thounder[thounderCount].translate.x);
 			if (enemyPersonPattern == THOUNDER_P) {
 				thounder[thounderCount].frame++;
-				if (thounder[thounderCount].frame >= 30 && thounder[thounderCount].frame <= 35) {
+				if (thounder[thounderCount].frame >= 40 && thounder[thounderCount].frame <= 43) {
 					thounder[thounderCount].isThounder = true;
-					if (thounder[thounderCount].isThounder) {
-						thounder[thounderCount].color = RED;
-						// 攻撃が多段ヒットするのでフラグで止めてる
-						if (!thounder[thounderCount].isMultiHit) {
-							if ((thounder[thounderCount].translate.x + static_cast<float>(kWindowHeight) / 2) > player.translate.x - player.size && thounder[thounderCount].translate.x - static_cast<float>(kWindowWidth) / 2 < (player.translate.x + player.size)
-								&& (thounder[thounderCount].translate.y + thounder[thounderCount].size) > player.translate.y - player.size && (thounder[thounderCount].translate.y - thounder[thounderCount].size) < player.translate.y + player.size) {
-								player.hp -= 1;
-								thounder[thounderCount].isMultiHit = true;
-							}
+				}
+				if (thounder[thounderCount].isThounder) {
+					// 当たり判定がある時だけ赤くなる
+					thounder[thounderCount].color = RED;
+
+					// 攻撃が多段ヒットするのでフラグで止めてる
+					if (!thounder[thounderCount].isMultiHit) {
+						// playerとの当たり判定
+						if ((thounder[thounderCount].translate.x + thounder[thounderCount].size) > player.translate.x - player.size && thounder[thounderCount].translate.x - thounder[thounderCount].size < (player.translate.x + player.size)
+							&& (thounder[thounderCount].translate.y + static_cast<float>(kWindowHeight) / 2) > player.translate.y - player.size && (thounder[thounderCount].translate.y - static_cast<float>(kWindowHeight) / 2) < player.translate.y + player.size) {
+							player.hp -= 1;
+							thounder[thounderCount].isMultiHit = true;
 						}
 					}
 				}
-				if (thounder[thounderCount].frame >= 35) {
+				// フラグがtrueになるまでplayerを追尾
+				if (!thounder[thounderCount].isThounder) {
+					// 攻撃の判定が出る9フレームまえに追尾をやめる
+					if (thounder[thounderCount].frame <= 31) {
+						// 追尾の処理
+						thounder[thounderCount].translate.x += (cosf(thounder[thounderCount].theta) * thounder[thounderCount].speed.x);
+					}
+				}
+				// 初期化
+				if (thounder[thounderCount].frame >= 43) {
 					thounder[thounderCount].isThounder = false;
 					thounder[thounderCount].isMultiHit = false;
 					thounderCount += 1;
 					thounder[thounderCount].frame = 0;
 				}
-
+				// 全部打ち終えたらパターンNONEに戻る
 				if (thounderCount >= 10) {
 					enemyPersonPattern = NONE_P;
 					thounderCount = 0;
@@ -1322,7 +1633,555 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			break;
 		case LASTENEMY2:
+#pragma region デバッグ用のキー
+			if (!keys[DIK_1] && preKeys[DIK_1]) {
+				NoneTime = 120;
+				enemyPersonPattern = JUMP_P;
+			}
+			if (!keys[DIK_2] && preKeys[DIK_2]) {
+				NoneTime = 120;
+				enemyPersonPattern = BACKSTEP_P;
+			}
+			if (!keys[DIK_3] && preKeys[DIK_3]) {
+				NoneTime = 120;
+				enemyPersonPattern = DUSH_P;
+			}
+			if (!keys[DIK_4] && preKeys[DIK_4]) {
+				NoneTime = 120;
+				enemyPersonPattern = TELEPORT_P;
+			}
+			if (!keys[DIK_5] && preKeys[DIK_5]) {
+				NoneTime = 120;
+				enemyPersonPattern = SHOCKWAVE_P;
+			}
+			if (!keys[DIK_6] && preKeys[DIK_6]) {
+				NoneTime = 120;
+				enemyPersonPattern = THOUNDER_P;
+			}
+#pragma endregion
+			// enemyの向き
+			if (player.translate.x <= enemyPerson.translate.x) {
+				enemyDir = LEFT_E;
+			}
+			if (player.translate.x >= enemyPerson.translate.x) {
+				enemyDir = RIGHT_E;
+			}
+			// playerに向きによって攻撃位置を変える
+			// enemyが左を向いてるとき
+			if (enemyDir == LEFT_E) {
+				normalAttack.translate.x = enemyPerson.translate.x - normalAttack.size * 3;
+				normalAttack.translate.y = enemyPerson.translate.y;
+				behindAttack.translate.x = enemyPerson.translate.x - behindAttack.size * 3;
+				behindAttack.translate.y = enemyPerson.translate.y;
+			}
+			// enemyが右を向いてるとき
+			if (enemyDir == RIGHT_E) {
+				normalAttack.translate.x = enemyPerson.translate.x + normalAttack.size * 3;
+				normalAttack.translate.y = enemyPerson.translate.y;
+				behindAttack.translate.x = normalAttack.translate.x;
+				behindAttack.translate.y = normalAttack.translate.y;
+			}
+			isSecondForm = true;
+#pragma region enemyの行動パターン
+			// 何もしない
+			if (enemyPersonPattern == NONE_P) {
+				NoneTime--;
+				normalAttack.color = WHITE;
+				normalAttack.isAttack = false;
+				// enemyがスタンしたとき硬直を長くする
+				if (enemyPerson.isStun) {
+					enemyPerson.isStun = false;
+					NoneTime = 240;
+				}
+				// 攻撃が終わるごとに2秒硬直
+				if (NoneTime <= 0) {
+					enemyPersonPattern = rand() % 5 + 1;
+					NoneTime = 120;
+				}
+			}
+#pragma region 移動パターン
+			// テレポート
+			if (enemyPersonPattern == TELEPORT_P) {
+				teleport.frame++;
+				if (teleport.frame >= 3 && teleport.frame <= 20) {
+					teleport.isTeleport = true;
+				}
+				if (teleport.isTeleport) {
+					if (playerDir == RIGHT) {
+						enemyPerson.translate.x = player.translate.x - player.size * 2;
+					}
+					if (playerDir == LEFT) {
+						enemyPerson.translate.x = player.translate.x + player.size * 2;
+					}
+				}
+				if (teleport.frame >= 20) {
+					teleport.isTeleport = false;
+					if (!teleport.isTeleport) {
+						enemyPersonPattern = BEHINDATTACK_P;
+						teleport.frame = 0;
+					}
+				}
+			}
+			// ジャンプ
+			if (enemyPersonPattern == JUMP_P) {
+				//JumpPattern(typePerson0.translate.x, typePerson0.translate.y, JumpPos.x, JumpPos.y, typePerson0.speed.x, typePerson0.speed.y, typePerson0.size, typePerson0.isJump, jumpEndTime);
+				enemyPerson.isJump = true;
+				jump.endTime += jump.endSpeed;
+				if (static_cast<float>(kWindowWidth) / 2 <= jump.translate.x) {
+					// x軸の移動
+					if (jump.endTime <= 1.0f) {
+						enemyPerson.translate.x = (1.0f - jump.endTime) * jump.translate.x + jump.endTime * 100.0f;
+					}
+				}
+				if (static_cast<float>(kWindowWidth) / 2 >= jump.translate.x) {
+					// x軸の移動
+					if (jump.endTime <= 1.0f) {
+						enemyPerson.translate.x = (1.0f - jump.endTime) * jump.translate.x + jump.endTime * 1180.0f;
+					}
+				}
+				// 自由落下
+				enemyPerson.speed.y += enemyPerson.acceleration.y;
+				enemyPerson.translate.y += enemyPerson.speed.y;
+				// 地面についたら初期化
+				if (enemyPerson.translate.y <= enemyPerson.size) {
+					enemyPerson.translate.y = enemyPerson.size;
+					jump.endTime = 0.0f;
+					enemyPerson.isJump = false;
+					enemyPersonPattern = LONGRANGE_P;
+				}
+			}
+			else {
+				jump.translate.x = enemyPerson.translate.x;
+				jump.translate.y = enemyPerson.translate.y;
+				enemyPerson.speed.y = 20.0f;
+			}
+			// バックステップ
+			if (enemyPersonPattern == BACKSTEP_P) {
+				backStep.isBackStep = true;
+				backStep.endTime += backStep.endSpeed;
+				// x軸の移動
+				if (backStep.endTime <= 1.0f) {
+					if (player.translate.x <= backStep.translate.x) {
+						enemyPerson.translate.x = (1.0f - backStep.endTime) * backStep.translate.x + backStep.endTime * 1180.0f;
+					}
+					if (player.translate.x >= backStep.translate.x) {
+						enemyPerson.translate.x = (1.0f - backStep.endTime) * backStep.translate.x + backStep.endTime * 100.0f;
+					}
+				}
+				// 自由落下
+				backStep.speed.y += enemyPerson.acceleration.y;
+				enemyPerson.translate.y += backStep.speed.y;
+				// 地面についたら初期化
+				if (enemyPerson.translate.y <= enemyPerson.size) {
+					enemyPerson.translate.y = enemyPerson.size;
+					backStep.speed.y = 10.0f;
+					backStep.isBackStep = false;
+					enemyPersonPattern = RANGEATTACK_P;
+					backStep.endTime = 0.0f;
+				}
+			}
+			else if (!backStep.isBackStep) {
+				// ジャンプの初速
+				backStep.speed.y = 10.0f;
+				backStep.translate.x = enemyPerson.translate.x;
+				backStep.translate.y = enemyPerson.translate.y;
+			}
+			// ダッシュ
+			if (enemyPersonPattern == DUSH_P) {
+				//DushPattern(enemyPerson.translate.x, enemyPerson.translate.y, dash.translate.x, dash.translate.y, dash.endTime, dash.endSpeed, player.translate.x, player.translate.y, player.size);
+				if (player.translate.x >= dash.translate.x) {
+					EaseIn(dash.endTime, dash.endSpeed, enemyPerson.translate.x, dash.translate.x, player.translate.x - player.size * 3);
+				}
+				if (player.translate.x <= dash.translate.x) {
+					EaseIn(dash.endTime, dash.endSpeed, enemyPerson.translate.x, dash.translate.x, player.translate.x + player.size * 3);
+				}
+				if (dash.endTime >= 1.0f) {
+					enemyPersonPattern = rand() % 3 + 4;
+					dash.endTime = 0.0f;
+				}
+			}
+			else {
+				dash.translate.x = enemyPerson.translate.x;
+				dash.translate.y = enemyPerson.translate.y;
+			}
+#pragma endregion
 
+#pragma region 攻撃パターン
+			// 近接攻撃ここから↓
+			if (enemyPersonPattern == NORMAL_P) {
+				normalAttack.frame++;
+				normalAttack.isAttack = false;
+				// 1撃目
+				if (normalAttack.frame >= 0 && normalAttack.frame <= 10) {
+					normalAttack.isAttack = true;
+					if (enemyDir == RIGHT_E) {
+						enemyPerson.translate.x += 0.5f;
+					}
+					if (enemyDir == LEFT_E) {
+						enemyPerson.translate.x -= 0.5f;
+					}
+				}
+				// 2撃目
+				if (normalAttack.frame >= 30 && normalAttack.frame <= 40) {
+					normalAttack.isAttack = true;
+					if (enemyDir == RIGHT_E) {
+						enemyPerson.translate.x += 0.5f;
+					}
+					if (enemyDir == LEFT_E) {
+						enemyPerson.translate.x -= 0.5f;
+					}
+				}
+				// 3撃目
+				if (normalAttack.frame >= 50 && normalAttack.frame <= 60) {
+					normalAttack.isAttack = true;
+					if (enemyDir == RIGHT_E) {
+						enemyPerson.translate.x += 1.0f;
+					}
+					if (enemyDir == LEFT_E) {
+						enemyPerson.translate.x -= 1.0f;
+					}
+				}
+				if (normalAttack.isAttack) {
+					normalAttack.color = RED;
+					// 攻撃が多段ヒットするのでフラグで止める
+					if (!normalAttack.isMultiHit) {
+						// 当たり判定
+						if ((normalAttack.translate.x + normalAttack.size) > player.translate.x - player.size && normalAttack.translate.x - normalAttack.size < (player.translate.x + player.size)
+							&& (normalAttack.translate.y + normalAttack.size) > player.translate.y - player.size && (normalAttack.translate.y - normalAttack.size) < player.translate.y + player.size) {
+							player.hp -= 1;
+							normalAttack.isMultiHit = true;
+						}
+					}
+				}
+				else {
+					normalAttack.color = WHITE;
+				}
+				// 初期化
+				if (normalAttack.frame >= 61) {
+					normalAttack.isAttack = false;
+					normalAttack.isMultiHit = false;
+					enemyPersonPattern = NONE_P;
+					normalAttack.frame = 0;
+				}
+			}
+			// 近接攻撃ここまで↑
+
+			// 背後から攻撃
+			if (enemyPersonPattern == BEHINDATTACK_P) {
+				behindAttack.frame++;
+				behindAttack.isBehindAttack = false;
+				// 1撃目
+				if (behindAttack.frame >= 30 && behindAttack.frame <= 40) {
+					behindAttack.isBehindAttack = true;
+					if (enemyDir == RIGHT_E) {
+						enemyPerson.translate.x += 0.5f;
+					}
+					if (enemyDir == LEFT_E) {
+						enemyPerson.translate.x -= 0.5f;
+					}
+				}
+				// 2撃目
+				if (behindAttack.frame >= 60 && behindAttack.frame <= 70) {
+					behindAttack.isBehindAttack = true;
+					if (enemyDir == RIGHT_E) {
+						enemyPerson.translate.x += 0.5f;
+					}
+					if (enemyDir == LEFT_E) {
+						enemyPerson.translate.x -= 0.5f;
+					}
+				}
+				// 3撃目
+				if (behindAttack.frame >= 80 && behindAttack.frame <= 90) {
+					behindAttack.isBehindAttack = true;
+					if (enemyDir == RIGHT_E) {
+						enemyPerson.translate.x += 1.0f;
+					}
+					if (enemyDir == LEFT_E) {
+						enemyPerson.translate.x -= 1.0f;
+					}
+				}
+				if (behindAttack.isBehindAttack) {
+					behindAttack.color = RED;
+					// 攻撃が多段ヒットするのでフラグで止める
+					if (!behindAttack.isMultiHit) {
+						// 当たり判定
+						if ((behindAttack.translate.x + behindAttack.size) > player.translate.x - player.size && behindAttack.translate.x - behindAttack.size < (player.translate.x + player.size)
+							&& (behindAttack.translate.y + behindAttack.size) > player.translate.y - player.size && (behindAttack.translate.y - behindAttack.size) < player.translate.y + player.size) {
+							player.hp -= 1;
+							behindAttack.isMultiHit = true;
+						}
+					}
+				}
+				else {
+					behindAttack.color = WHITE;
+				}
+				// 初期化
+				if (behindAttack.frame >= 90) {
+					behindAttack.isBehindAttack = false;
+					behindAttack.isMultiHit = false;
+					enemyPersonPattern = NONE_P;
+					behindAttack.frame = 0;
+				}
+			}
+			// 遠距離攻撃
+			if (enemyPersonPattern == LONGRANGE_P) {
+				longAttack.frame++;
+				longAttack.isAttack = true;
+				if (longAttack.frame >= 15) {
+					if (static_cast<float>(kWindowWidth) / 2 <= enemyPerson.translate.x) {
+						longAttack.translate.x -= longAttack.speed.x;
+					}
+					if (static_cast<float>(kWindowWidth) / 2 >= enemyPerson.translate.x) {
+						longAttack.translate.x += longAttack.speed.x;
+					}
+				}
+				if (longAttack.translate.x <= 0 - longAttack.size || longAttack.translate.x >= kWindowWidth + longAttack.size) {
+					longAttack.isAttack = false;
+					longAttack.frame = 0;
+					enemyPersonPattern = NONE_P;
+				}
+				// 当たり判定
+				if (!longAttack.isMultiHit) {
+					if ((longAttack.translate.x + longAttack.size) > player.translate.x - player.size && longAttack.translate.x - longAttack.size < (player.translate.x + player.size)
+						&& (longAttack.translate.y + longAttack.size) > player.translate.y - player.size && (longAttack.translate.y - longAttack.size) < player.translate.y + player.size) {
+						player.hp -= 1;
+						longAttack.isMultiHit = true;
+					}
+				}
+			}
+			else {
+				longAttack.translate.x = enemyPerson.translate.x;
+				longAttack.translate.y = enemyPerson.translate.y;
+			}
+			// 範囲攻撃
+			if (enemyPersonPattern == RANGEATTACK_P) {
+				rangeAttack.frame++;
+				enemyPerson.speed.x = 100.0f;
+				if (rangeAttack.frame >= 8) {
+					if (static_cast<float>(kWindowWidth) / 2 >= rangeAttack.drawSwordPos.x) {
+						enemyPerson.translate.x += enemyPerson.speed.x;
+					}
+					if (static_cast<float>(kWindowWidth) / 2 <= rangeAttack.drawSwordPos.x) {
+						enemyPerson.translate.x -= enemyPerson.speed.x;
+					}
+				}
+				if (enemyPerson.translate.x >= 1300.0f || enemyPerson.translate.x <= -100.0f) {
+					enemyPerson.speed.x = 0.0f;
+				}
+				if (rangeAttack.frame >= 25) {
+					rangeAttack.isAttack = true;
+					if (rangeAttack.isAttack) {
+						rangeAttack.color = RED;
+						// 攻撃が多段ヒットするのでフラグで止めてる
+						if (!rangeAttack.isMultiHit) {
+							if ((rangeAttack.translate.x + static_cast<float>(kWindowWidth) / 2) > player.translate.x - player.size && rangeAttack.translate.x - static_cast<float>(kWindowWidth) / 2 < (player.translate.x + player.size)
+								&& (rangeAttack.translate.y + rangeAttack.size) > player.translate.y - player.size && (rangeAttack.translate.y - rangeAttack.size) < player.translate.y + player.size) {
+								player.hp -= 1;
+								rangeAttack.isMultiHit = true;
+							}
+						}
+						// 50以上は攻撃判定を消して初期化
+						if (rangeAttack.frame >= 50) {
+							enemyPersonPattern = SHOCKWAVE_P;
+							rangeAttack.frame = 0;
+							rangeAttack.isAttack = false;
+							rangeAttack.isMultiHit = false;
+						}
+					}
+				}
+			}
+			else {
+				rangeAttack.drawSwordPos.x = enemyPerson.translate.x;
+				rangeAttack.drawSwordPos.y = enemyPerson.translate.y;
+			}
+			// 衝撃波
+			if (enemyPersonPattern == SHOCKWAVE_P) {
+				if (count == 0) {
+					isShockWaveJump = true;
+				}
+				if (isShockWaveJump) {
+					// x軸の移動
+					if (shockWave[0].endTime <= 1.0f) {
+						shockWave[0].endSpeed = 1.0f / 30.0f;
+						shockWave[0].endTime += shockWave[0].endSpeed;
+						enemyPerson.translate.x = (1.0f - shockWave[0].endTime) * shockWaveJumpPos.x + shockWave[0].endTime * kWindowWidth / 2;
+					}
+					// 自由落下
+					shockWave[0].speed.y += -0.8f;
+					enemyPerson.translate.y += shockWave[0].speed.y;
+					// 地面についたら初期化
+					if (enemyPerson.translate.y <= enemyPerson.size) {
+						enemyPerson.translate.y = enemyPerson.size;
+						if (isShockWaveJump && shockWave[0].endTime >= 0.5f) {
+							count++;
+						}
+						shockWave[0].speed.y = 40.0f;
+						shockWave[0].endTime = 0.0f;
+						isShockWaveJump = false;
+					}
+					if (count == 1) {
+						shockWave[0].isAttack = true;
+						shockWave[1].isAttack = true;
+					}
+				}
+				else {
+					shockWave[0].speed.y = 40.0f;
+				}
+
+				if (shockWave[0].isAttack) {
+					if (shockWave[0].translate.x <= 0 - shockWave[0].size || shockWave[0].translate.x >= kWindowWidth + shockWave[0].size) {
+						shockWave[0].frame = 0;
+						shockWave[0].isMultiHit = false;
+						shockWave[0].isAttack = false;
+						enemyPersonPattern = NONE_P;
+					}
+				}
+				if (shockWave[1].isAttack) {
+					if (shockWave[1].translate.x <= 0 - shockWave[1].size || shockWave[1].translate.x >= kWindowWidth + shockWave[1].size) {
+						shockWave[1].frame = 0;
+						shockWave[1].isMultiHit = false;
+						shockWave[1].isAttack = false;
+					}
+				}
+
+				if (shockWave[0].isAttack) {
+					shockWave[0].frame++;
+					shockWave[0].translate.x += shockWave[0].speed.x;
+					// 当たり判定
+					if (!shockWave[0].isMultiHit) {
+						if ((shockWave[0].translate.x + shockWave[0].size) > player.translate.x - player.size && shockWave[0].translate.x - shockWave[0].size < (player.translate.x + player.size)
+							&& (shockWave[0].translate.y + shockWave[0].size) > player.translate.y - player.size && (shockWave[0].translate.y - shockWave[0].size) < player.translate.y + player.size) {
+							player.hp -= 1;
+							shockWave[0].isMultiHit = true;
+						}
+					}
+				}
+				else {
+					shockWave[0].translate.x = enemyPerson.translate.x;
+					shockWave[0].translate.y = enemyPerson.translate.y;
+				}
+				if (shockWave[1].isAttack) {
+					shockWave[1].frame++;
+					shockWave[1].translate.x -= shockWave[1].speed.x;
+					// 当たり判定
+					if (!shockWave[1].isMultiHit) {
+						if ((shockWave[1].translate.x + shockWave[1].size) > player.translate.x - player.size && shockWave[1].translate.x - shockWave[1].size < (player.translate.x + player.size)
+							&& (shockWave[1].translate.y + shockWave[1].size) > player.translate.y - player.size && (shockWave[1].translate.y - shockWave[1].size) < player.translate.y + player.size) {
+							player.hp -= 1;
+							shockWave[1].isMultiHit = true;
+						}
+					}
+				}
+				else {
+					shockWave[1].translate.x = enemyPerson.translate.x;
+					shockWave[1].translate.y = enemyPerson.translate.y;
+				}
+			}
+			else {
+				shockWaveJumpPos.x = enemyPerson.translate.x;
+				shockWaveJumpPos.y = enemyPerson.translate.y;
+				count = 0;
+			}
+			// 落雷
+			// playerとenemy間のthetaを取得
+			thounder[thounderCount].theta = atan2(player.translate.y - thounder[thounderCount].translate.y, player.translate.x - thounder[thounderCount].translate.x);
+			if (enemyPersonPattern == THOUNDER_P) {
+				thounder[thounderCount].frame++;
+				if (thounder[thounderCount].frame >= 40 && thounder[thounderCount].frame <= 43) {
+					thounder[thounderCount].isThounder = true;
+				}
+				if (thounder[thounderCount].isThounder) {
+					// 当たり判定がある時だけ赤くなる
+					thounder[thounderCount].color = RED;
+
+					// 攻撃が多段ヒットするのでフラグで止めてる
+					if (!thounder[thounderCount].isMultiHit) {
+						// playerとの当たり判定
+						if ((thounder[thounderCount].translate.x + thounder[thounderCount].size) > player.translate.x - player.size && thounder[thounderCount].translate.x - thounder[thounderCount].size < (player.translate.x + player.size)
+							&& (thounder[thounderCount].translate.y + static_cast<float>(kWindowHeight) / 2) > player.translate.y - player.size && (thounder[thounderCount].translate.y - static_cast<float>(kWindowHeight) / 2) < player.translate.y + player.size) {
+							player.hp -= 1;
+							thounder[thounderCount].isMultiHit = true;
+						}
+					}
+				}
+				// フラグがtrueになるまでplayerを追尾
+				if (!thounder[thounderCount].isThounder) {
+					// 攻撃の判定が出る9フレームまえに追尾をやめる
+					if (thounder[thounderCount].frame <= 30) {
+						// 追尾の処理
+						thounder[thounderCount].translate.x += (cosf(thounder[thounderCount].theta) * thounder[thounderCount].speed.x);
+					}
+				}
+				// 初期化
+				if (thounder[thounderCount].frame >= 43) {
+					thounder[thounderCount].isThounder = false;
+					thounder[thounderCount].isMultiHit = false;
+					thounderCount += 1;
+					thounder[thounderCount].frame = 0;
+				}
+				// 全部打ち終えたらパターンNONEに戻る
+				if (thounderCount >= 10) {
+					enemyPersonPattern = BACKSTEP_P;
+					thounderCount = 0;
+				}
+			}
+			// 閃光弾
+			if (enemyPersonPattern == FLASH_P) {
+				flash.frame++;		
+				if (flash.frame <= 60) {
+					flash.isFlash = true;
+				}
+				else {
+					flash.isFlash = false;
+				}
+				if (flash.isFlash) {
+					flash.speed.y += -0.3f;
+					flash.translate.y += flash.speed.y;
+					if (enemyDir == LEFT_E) {
+						EaseIn(flash.endTime, flash.endSpeed, flash.translate.x, enemyPerson.translate.x, enemyPerson.translate.x - 150.0f);
+					}
+					if (enemyDir == RIGHT_E) {
+						EaseIn(flash.endTime, flash.endSpeed, flash.translate.x, enemyPerson.translate.x, enemyPerson.translate.x + 150.0f);
+					}
+				}
+				else {
+					flash.endTime = 0.0f;
+				}
+				if (flash.frame >= 60 && flash.frame <= 61) {
+					if (playerDir == LEFT && player.translate.x >= flash.translate.x || playerDir == RIGHT && player.translate.x <= flash.translate.x) {
+						player.isLongStun = true;				
+					}
+					else {
+						player.isShortStun = true;
+					}
+				}
+
+				if (player.isLongStun) {
+					flash.carrentAlpha += -0x02;
+				}
+				if (player.isShortStun) {
+					flash.carrentAlpha += -0x10;
+				}
+				if (flash.carrentAlpha <= 0x00) {
+					flash.frame = 0;
+					flash.carrentAlpha = 0xff;
+					player.isLongStun = false;
+					player.isShortStun = false;
+					enemyPersonPattern = NONE_P;
+				}
+			}
+			else {
+				flash.translate.x = enemyPerson.translate.x;
+				flash.translate.y = enemyPerson.translate.y;
+				flash.speed.y = 14.0f;
+			}
+
+			if (!keys[DIK_7] && preKeys[DIK_7]) {
+				enemyPersonPattern = FLASH_P;
+			}
+#pragma endregion
+
+#pragma endregion
 			break;
 		}
 
@@ -1366,7 +2225,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		switch (scene) {
 		case TITLE:
 			// デバッグ文字
-			Novice::ScreenPrintf(0, 10, "Press keys   1:FIRSTENEMY  2:SECONDENEMY  3:LASTENEMY");
+			Novice::ScreenPrintf(0, 10, "Press keys   1:FIRSTENEMY  2:SECONDENEMY  3:LASTENEMY   4:LASTENEMY2");
 			break;
 		case FIRSTENEMY:
 			// enemy
@@ -1397,8 +2256,36 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					explode.color
 				);
 			}
+			// 範囲攻撃
+			if (beam.isAttack) {
+				Novice::DrawQuad(
+					beam.translate.x - beam.size.x, (beam.translate.y - beam.size.y) * -1 + kWindowHeight,
+					beam.translate.x + beam.size.x, (beam.translate.y - beam.size.y) * -1 + kWindowHeight,
+					beam.translate.x - beam.size.x, (beam.translate.y + beam.size.y) * -1 + kWindowHeight,
+					beam.translate.x + beam.size.x, (beam.translate.y + beam.size.y) * -1 + kWindowHeight,
+					0, 0,
+					128, 720,
+					attackGh,
+					beam.color
+				);
+			}
+			// 遠距離攻撃
+			for (int i = 0; i < 5; i++) {
+				if (longAttackM[i].isAttack) {
+					Novice::DrawQuad(
+						longAttackM[i].translate.x - longAttackM[i].size, (longAttackM[i].translate.y - longAttackM[i].size) * -1 + kWindowHeight,
+						longAttackM[i].translate.x + longAttackM[i].size, (longAttackM[i].translate.y - longAttackM[i].size) * -1 + kWindowHeight,
+						longAttackM[i].translate.x - longAttackM[i].size, (longAttackM[i].translate.y + longAttackM[i].size) * -1 + kWindowHeight,
+						longAttackM[i].translate.x + longAttackM[i].size, (longAttackM[i].translate.y + longAttackM[i].size) * -1 + kWindowHeight,
+						0, 0,
+						64, 64,
+						attackGh,
+						RED
+					);
+				}
+			}
 			// デバッグ文字
-			Novice::ScreenPrintf(0, 10, "Press keys   1:EXPLODE 2:CRUSH");
+			Novice::ScreenPrintf(0, 10, "Press keys   1:EXPLODE  2:CRUSH  3:BEAM");
 			break;
 		case SECONDENEMY:
 			break;
@@ -1431,6 +2318,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					normalAttack.color
 				);
 			}
+
 			// 背後から攻撃
 			if (behindAttack.isBehindAttack) {
 				Novice::DrawQuad(
@@ -1504,7 +2392,122 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Novice::ScreenPrintf(0, 10, "Press keys    1:JUMP 2:BACKSTEP 3:DUSH 4:TELEPORT 5:SHOCKWAVE 6:THOUNDER");
 			break;
 		case LASTENEMY2:
+			// enemy
+			if (enemyPerson.isAlive) {
+				if (!teleport.isTeleport) {
+					Novice::DrawQuad(
+						enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+						enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+						enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+						enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						playerGh,
+						enemyPerson.color
+					);
+				}
+			}
+			// 近接攻撃
+			if (normalAttack.isAttack) {
+				Novice::DrawQuad(
+					normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+					normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+					normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+					normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+					0, 0,
+					128, 128,
+					attackGh,
+					normalAttack.color
+				);
+			}
 
+			// 背後から攻撃
+			if (behindAttack.isBehindAttack) {
+				Novice::DrawQuad(
+					behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+					behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+					behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+					behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+					0, 0,
+					128, 128,
+					attackGh,
+					behindAttack.color
+				);
+			}
+			// 範囲攻撃
+			if (rangeAttack.isAttack) {
+				Novice::DrawQuad(
+					rangeAttack.translate.x - static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y - rangeAttack.size) * -1 + kWindowHeight,
+					rangeAttack.translate.x + static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y - rangeAttack.size) * -1 + kWindowHeight,
+					rangeAttack.translate.x - static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y + rangeAttack.size) * -1 + kWindowHeight,
+					rangeAttack.translate.x + static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y + rangeAttack.size) * -1 + kWindowHeight,
+					0, 0,
+					1280, 128,
+					attackGh,
+					rangeAttack.color
+				);
+			}
+			// 衝撃波
+			for (int i = 0; i < 2; i++) {
+				if (shockWave[i].isAttack) {
+					Novice::DrawQuad(
+						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
+						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
+						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y + shockWave[i].size * 2) * -1 + kWindowHeight,
+						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y + shockWave[i].size * 2) * -1 + kWindowHeight,
+						0, 0,
+						64, 128,
+						attackGh,
+						RED
+					);
+				}
+			}
+			// 遠距離攻撃
+			if (longAttack.isAttack) {
+				Novice::DrawQuad(
+					longAttack.translate.x - longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
+					longAttack.translate.x + longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
+					longAttack.translate.x - longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
+					longAttack.translate.x + longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
+					0, 0,
+					64, 64,
+					attackGh,
+					RED
+				);
+			}
+			// 落雷
+			for (int i = 0; i < 10; i++) {
+				if (thounder[i].isThounder) {
+					Novice::DrawQuad(
+						thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
+						thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
+						thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
+						thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
+						0, 0,
+						64, 720,
+						attackGh,
+						RED
+					);
+				}
+			}
+
+			if (flash.isFlash) {
+				Novice::DrawQuad(
+					flash.translate.x - flash.size, (flash.translate.y - flash.size) * -1 + kWindowHeight,
+					flash.translate.x + flash.size, (flash.translate.y - flash.size) * -1 + kWindowHeight,
+					flash.translate.x - flash.size, (flash.translate.y + flash.size) * -1 + kWindowHeight,
+					flash.translate.x + flash.size, (flash.translate.y + flash.size) * -1 + kWindowHeight,
+					0, 0,
+					32, 32,
+					attackGh,
+					RED
+				);
+			}
+			if (player.isShortStun || player.isLongStun) {
+				Novice::DrawBox(0, 0, kWindowWidth, kWindowHeight, 0.0f, WHITE + flash.carrentAlpha, kFillModeSolid);
+			}
+			// デバッグ文字
+			Novice::ScreenPrintf(0, 10, "Press keys    1:JUMP 2:BACKSTEP 3:DUSH 4:TELEPORT 5:SHOCKWAVE 6:THOUNDER 7:FLASH");
 			break;
 		}
 		///
