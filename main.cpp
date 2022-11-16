@@ -1746,8 +1746,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					thounder[thounderCount].frame++;
 				}
 
-
-
 				if (thounder[thounderCount].frame >= 40 && thounder[thounderCount].frame <= 43) {
 					thounder[thounderCount].isThounder = true;
 				}
@@ -1760,6 +1758,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				// 全部打ち終えたらパターンNONEに戻る
 				if (thounderCount >= 10 && thounder[thounderCount].frame <= 80) {
+					for (int i = 0; i < 10; i++) {
+						thounder[i].frame = 0;
+					}
 					enemyPersonPattern = NONE_P;
 					thounderCount = 0;
 				}
@@ -2341,6 +2342,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				// 全部打ち終えたらパターンNONEに戻る
 				if (thounderCount >= 10 && thounder[thounderCount].frame <= 80) {
+					for (int i = 0; i < 10; i++) {
+						thounder[i].frame = 0;
+					}
 					enemyPersonPattern = NONE_P;
 					thounderCount = 0;
 				}
