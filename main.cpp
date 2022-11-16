@@ -2329,8 +2329,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					thounder[thounderCount].frame++;
 				}
 
-
-
 				if (thounder[thounderCount].frame >= 40 && thounder[thounderCount].frame <= 43) {
 					thounder[thounderCount].isThounder = true;
 				}
@@ -2427,7 +2425,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				player.isShortStun = false;
 			}
 #pragma endregion
-			// 攻撃パターンのendregion
+
+// 攻撃パターンのendregion
 #pragma endregion 
 // enemyの行動パターンのendregion
 #pragma endregion
