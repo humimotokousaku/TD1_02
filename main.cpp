@@ -445,6 +445,16 @@ void DushPattern(float& enemyX, float& enemyY, float dushX, float dushY, float& 
 	}
 }
 
+float p2e(float& playerX, float& playerY, float& enemyX, float& enemyY) {
+	float distance;
+	Vector2 p2e;
+
+	p2e.x = enemyX - playerX;
+	p2e.y = enemyY - playerY;
+
+	distance = sqrt(p2e.x * p2e.x + p2e.y * p2e.y);
+	return distance;
+}
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -676,9 +686,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	};
 #pragma endregion
 
+	// playerとenemyの距離
+	float distance;
 
-
-
+	// 没データ
 #pragma region 中型のenemy
 	// 中型のenemy
 	EnemyMedium enemyMedium = {
@@ -766,11 +777,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int isRL = false;
 	int isRR = false;
 #pragma endregion
-
-	// playerとenemyの距離
-	Vector2 e2p = {
-		0.0f,0.0f
-	};
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -893,6 +899,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/**********playerの近接攻撃処理ここまで↑**********/
 
 #pragma endregion
+		distance = p2e(player.translate.x, player.translate.y, enemyPerson.translate.x, enemyPerson.translate.y);
 
 		// シェイクの処理
 		if (shake.isShake) {
@@ -1270,16 +1277,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				normalAttack.color = WHITE;
 				normalAttack.isAttack = false;
-				// enemyがスタンしたとき硬直を長くする
-				/*if (enemyPerson.isStun) {
-					enemyPerson.isStun = false;
-					NoneTime = 240;
-				}*/
 				// 攻撃が終わるごとに2秒硬直
 				if (NoneTime <= 0) {
-					enemyPersonPattern = rand() % 6 + 2;
 					enemyPerson.speed.y = 38.0f;
 					NoneTime = 60;
+					if (distance >= 0 && distance <= 200) {
+						enemyPersonPattern = rand() % 6 + 3;
+					}
+					if (distance >= 201) {
+						enemyPersonPattern = rand() % 6 + 2;
+					}
+
 				}
 			}
 #pragma region 移動パターン
@@ -1783,15 +1791,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 // 行動パターンのendregion
 #pragma endregion
-			/********各キャラの体力がなくなると死亡********/
+			// 死ぬ処理
 			// player
 			if (player.hp <= 0) {
 				player.isAlive = false;
 			}
+
+			// 形態変化
 			// 人型の敵
 			if (enemyPerson.hp <= 0) {
 				scene = LASTENEMY2;
-				enemyPerson.hp = 20;
+				enemyPerson.hp = 10;
 			}
 			break;
 		case LASTENEMY2:
@@ -1861,16 +1871,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				normalAttack.color = WHITE;
 				normalAttack.isAttack = false;
-				//// enemyがスタンしたとき硬直を長くする
-				//if (enemyPerson.isStun) {
-				//	enemyPerson.isStun = false;
-				//	NoneTime = 240;
-				//}
 				// 攻撃が終わるごとに2秒硬直
 				if (NoneTime <= 0) {
-					enemyPersonPattern = rand() % 7 + 1;
 					enemyPerson.speed.y = 38.0f;
 					NoneTime = 60;
+					if (distance >= 0 && distance <= 200) {
+						enemyPersonPattern = rand() % 6 + 3;
+					}
+					if (distance >= 201 && distance <= 400) {
+						enemyPersonPattern = rand() % 6 + 2;
+					}
+					if (distance >= 401) {
+						enemyPersonPattern = rand() % 7 + 1;
+					}
 				}
 			}
 
@@ -2744,6 +2757,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Novice::ScreenPrintf(0, 10, "Press keys    1:JUMP 2:BACKSTEP 3:DUSH 4:TELEPORT 5:SHOCKWAVE 6:THOUNDER");
 			Novice::ScreenPrintf(0, 30, "%d", player.hp);
 			Novice::ScreenPrintf(0, 50, "%d", enemyPerson.hp);
+			Novice::ScreenPrintf(0, 70, "%f", distance);
 			break;
 		case LASTENEMY2:
 			// enemy
