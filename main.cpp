@@ -744,7 +744,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int isFadeIn = true;
 	int isFadeOut = false;
 	int formFrame = 0;
-	float formCarrentAlpha = 0x00;
+	int formCarrentAlpha = 0x00;
 
 	// 攻撃予測範囲
 	// 落雷
@@ -785,6 +785,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///////
 		// 形態変化
 		if (isSecondForm) {
+			playerAttack.isAttack = false;
 			enemyPersonPattern = NONE_P;
 			formFrame++;
 			if (formFrame <= 180) {
@@ -2318,6 +2319,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// player
 			if (player.hp <= 0) {
 				player.isAlive = false;
+				scene = GAMEOVER;
 			}
 			// 人型の敵
 			if (enemyPerson.hp <= 0) {
