@@ -737,6 +737,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// NONE以外は攻撃を食らわない
 	int isInvincble = false;
+	int enemyCarrentAlpha = 0x00;
 
 	// 形態変化
 	int isSecondForm = false;
@@ -964,7 +965,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			shake.randPos.x = 0.0f;
 			shake.randPos.y = 0.0f;
 		}
-
+		// 攻撃が通らないとき
+		// enemyを半透明にする
+		if (isInvincble) {
+			enemyCarrentAlpha = 0x80;
+		}
+		else {
+			enemyCarrentAlpha = 0x00;
+		}
+		
 		switch (scene) {
 		case TITLE:
 #pragma region デバッグ用のキー
@@ -981,7 +990,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 			break;
 		case GUIDE:
-
 
 			break;
 		case LASTENEMY1:
@@ -1011,6 +1019,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				enemyPersonPattern = THOUNDER_P;
 			}
 #pragma endregion
+			
 			if (!isSecondForm) {
 				// enemyの向き
 				if (player.translate.x <= enemyPerson.translate.x) {
@@ -1659,6 +1668,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				enemyPersonPattern = FLASH_P;
 			}
 #pragma endregion
+
 			if (!isSecondForm) {
 				// enemyの向き
 				if (player.translate.x <= enemyPerson.translate.x) {
@@ -2307,7 +2317,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			// player
 			if (player.hp <= 0) {
-				//player.isAlive = false;
+				player.isAlive = false;
 			}
 			// 人型の敵
 			if (enemyPerson.hp <= 0) {
@@ -2759,7 +2769,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								enemyAnim.Attack1Range, 0,
 								128, 128,
 								EnemyAttack1Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2771,7 +2781,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								enemyAnim.Attack1Range, 0,
 								128, 128,
 								EnemyAttack1Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 					}
@@ -2785,7 +2795,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								enemyAnim.Attack2Range, 0,
 								128, 128,
 								EnemyAttack2Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2797,7 +2807,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								enemyAnim.Attack2Range, 0,
 								128, 128,
 								EnemyAttack2Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 					}
@@ -2811,7 +2821,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								enemyAnim.Attack3Range, 0,
 								128, 128,
 								EnemyAttack3Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2823,7 +2833,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								enemyAnim.Attack3Range, 0,
 								128, 128,
 								EnemyAttack3Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 
@@ -2838,7 +2848,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								768, 0,
 								128, 128,
 								EnemyAttack2Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2850,7 +2860,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								768, 0,
 								128, 128,
 								EnemyAttack2Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 					}
@@ -2864,7 +2874,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								0, 0,
 								128, 128,
 								EnemyAttack2Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2876,7 +2886,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								0, 0,
 								128, 128,
 								EnemyAttack2Texture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 					}
@@ -2890,7 +2900,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								0, 0,
 								128, 128,
 								EnemyJumpTexture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2902,7 +2912,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								0, 0,
 								128, 128,
 								EnemyJumpTexture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 					}
@@ -2916,7 +2926,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								0, 0,
 								128, 128,
 								EnemyBackstepTexture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2928,7 +2938,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								0, 0,
 								128, 128,
 								EnemyBackstepTexture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 					}
@@ -2942,7 +2952,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								(enemyAnim.WaitAnimCount / enemyAnim.WaitAnimSpeed) * 128, 0,
 								128, 128,
 								EnemyWaitTexture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 						else {
@@ -2954,7 +2964,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								(enemyAnim.WaitAnimCount / enemyAnim.WaitAnimSpeed) * 128, 0,
 								128, 128,
 								EnemyWaitTexture,
-								enemyPerson.color
+								enemyPerson.color - enemyCarrentAlpha
 							);
 						}
 					}
@@ -3076,7 +3086,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 							0, 0,
 							128, 128,
 							playerGh,
-							enemyPerson.color
+							enemyPerson.color - enemyCarrentAlpha
 						);
 					}
 				}
@@ -3092,7 +3102,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 							0, 0,
 							128, 128,
 							playerGh,
-							enemyPerson.color
+							enemyPerson.color - enemyCarrentAlpha
 						);
 					}
 				}
