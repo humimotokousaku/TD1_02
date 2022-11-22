@@ -543,7 +543,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma region player
 	// 本体
 	Player player = {
-		{64 * 2,64}, // 位置
+		{64 * 2,48}, // 位置
 		{7.0f,10.0f}, // 速度
 		{0.0f,-0.8f},// 重力加速度
 		48.0f,		 // サイズ
@@ -578,7 +578,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma region 人型のenemy
 	// enemy(人型)
 	EnemyPerson enemyPerson = {
-		{kWindowWidth - 64.0f * 2,64.0f},
+		{kWindowWidth - 64.0f * 2,48.0f},
 		{6.0f,0.0f},
 		{0.0f,-0.8f},
 		48.0f,
