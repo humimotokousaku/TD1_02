@@ -583,7 +583,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{0.0f,-0.8f},
 		48.0f,
 		0.0f,
-		10,
+		20,
 		true,
 		false,
 		false,
@@ -1607,7 +1607,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// 人型の敵
 			if (enemyPerson.hp <= 0) {
 				isSecondForm = true;
-				enemyPerson.hp = 10;
+				enemyPerson.hp = 20;
 			}
 			break;
 		case LASTENEMY2:
@@ -2991,21 +2991,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					);
 				}
 			}
-			// 落雷の落ちる地点
-			for (int i = 0; i < 10; i++) {
-				if (thounderPredictionRange[i]) {
-					Novice::DrawQuad(
-						thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
-						thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
-						thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
-						thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
-						0, 0,
-						64, 720,
-						attackGh,
-						WHITE - 0xf1
-					);
-				}
-			}
 			// 閃光弾
 			if (flash.isFlash) {
 				Novice::DrawQuad(
@@ -3030,6 +3015,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Novice::ScreenPrintf(0, 70, "%f", distance);
 			break;
 		}
+		// 落雷の落ちる地点
+		for (int i = 0; i < 10; i++) {
+			if (thounderPredictionRange[i]) {
+				Novice::DrawQuad(
+					thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
+					thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
+					thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
+					thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
+					0, 0,
+					64, 720,
+					attackGh,
+					WHITE - 0xf1
+				);
+			}
+		}
+		// 第二形態
 		if (isSecondForm) {
 			Novice::DrawBox(0, 0, kWindowWidth, kWindowHeight, 0.0f, BLACK - formCarrentAlpha, kFillModeSolid);
 		}
