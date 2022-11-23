@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-const char kWindowTitle[] = "LC1A_22_フミモトコウサク_タイトル";
+const char kWindowTitle[] = "切ll";
 
 const int kWindowWidth = 1280;
 const int kWindowHeight = 720;
