@@ -141,6 +141,8 @@ typedef struct PlayerAnim {
 	int Attack1AnimSpeed = 2;
 	int Attack1AnimFlag = 0;
 	int Attack1Range = 0;
+	int DashAnimCount = 0;
+	int DashAnimSpeed = 6;
 };
 PlayerAnim playerAnim;
 
@@ -315,7 +317,17 @@ typedef struct BackStep {
 //雷のアニメーション
 int thunderAnimCount = 0;
 int thunderAnimSpeed = 1;
-int thunderRange = 0;
+//範囲攻撃のアニメーション
+int RangeAttackAnimCount = 0;
+int RangeAttackAnimSpeed = 3;
+//プレイヤー移動フラグ
+int PlayerDashFlag = 0;
+//テレポート
+int TeleportEffectX = 0;
+int TeleportEffectY = 0;
+int TeleportAnimCount = 0;
+int TeleportAnimSpeed = 5;
+
 
 
 #pragma endregion
@@ -459,9 +471,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int EnemyAttack2Texture = Novice::LoadTexture("./Resources/Enemy_Attack2.png");
 	int EnemyAttack3Texture = Novice::LoadTexture("./Resources/Enemy_Attack3.png");
 	int thunderTexture = Novice::LoadTexture("./Resources/thunder.png");
+	int BeamTexture = Novice::LoadTexture("./Resources/beam.png");
+	int BGTexture = Novice::LoadTexture("./Resources/aaa.png");
+	int WaveTexture = Novice::LoadTexture("./Resources/Syougekiha.png");
+	int PlayerDashTexture = Novice::LoadTexture("./Resources/Player_Dash.png");
+	int ParticleTexture = Novice::LoadTexture("./Resources/Particle.png");
+	int FlashTexture = Novice::LoadTexture("./Resources/Flash.png");
+	int TitleBGTexture = Novice::LoadTexture("./Resources/Title_BG.png");
+	int TitleTexture = Novice::LoadTexture("./Resources/Title.png");
+	int TeleportTexture = Novice::LoadTexture("./Resources/Teleport.png");
+	int GameOverTexture = Novice::LoadTexture("./Resources/GAMEOVER.png");
+	int GameClearTexture = Novice::LoadTexture("./Resources/GAMECLEAR.png");
+	
+
+
+
+	int playerNormalAttackGh = Novice::LoadTexture("./Resources/playerNormalAttack.png");
+	int enemyNormalAttackGh = Novice::LoadTexture("./Resources/enemyNormalAttack.png");
+
+
+
 
 	// チュートリアル
-
 	// 攻撃系
 	int tutorialAttackGh[3] = {
 		Novice::LoadTexture("./Resources/tutorial/tutorial_SPACE.png"),
@@ -494,6 +525,37 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int orGh = Novice::LoadTexture("./Resources/tutorial/font_Or.png");
 	// press space
 	int pressSpaceGh = Novice::LoadTexture("./Resources/tutorial/font_PressSpace.png");
+
+
+	//音
+	int Attack1SE = Novice::LoadAudio("./Resources/Sounds/剣の素振り1.mp3");
+	int Attack2SE = Novice::LoadAudio("./Resources/Sounds/剣の素振り2.mp3");
+	int Attack3SE = Novice::LoadAudio("./Resources/Sounds/剣の素振り3.mp3");
+	int SlashSE = Novice::LoadAudio("./Resources/Sounds/刀の素振り1.mp3");
+	int ThunderSE = Novice::LoadAudio("./Resources/Sounds/魔王魂  雷04.mp3");
+	int WaveSE = Novice::LoadAudio("./Resources/Sounds/大剣で斬る.mp3");
+	int RangeSE = Novice::LoadAudio("./Resources/Sounds/居合抜き1.mp3");
+
+	int TitleBGM = Novice::LoadAudio("./Resources/Sounds/PerituneMaterial_Holy_Place3.mp3");
+	int Enemy1BGM = Novice::LoadAudio("./Resources/Sounds/PerituneMaterial_BattleField5.mp3");
+	int Enemy2BGM = Novice::LoadAudio("./Resources/Sounds/PerituneMaterial_Dramatic4.mp3");
+	int GameOverBGM = Novice::LoadAudio("./Resources/Sounds/PerituneMaterial_RainDrop.mp3");
+	int GameClearBGM = Novice::LoadAudio("./Resources/Sounds/PerituneMaterial_Recollection.mp3");
+	int TitleBGM_B = -1;
+	int Enemy1BGM_B = -1;
+	int Enemy2BGM_B = -1;
+	int GameOverBGM_B = -1;
+	int GameClearBGM_B = -1;
+	int IsPlayBGM = 0;
+
+	//音フラグ
+	int Attack1SEFlag = 0;
+	int Attack2SEFlag = 0;
+	int Attack3SEFlag = 0;
+	int SlashSEFlag = 0;
+	int ThunderSEFlag = 0;
+	int WaveSEFlag = 0;
+	int RangeSEFlag = 0;
 
 	/**********宣言**********/
 #pragma region シェイク
@@ -732,6 +794,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector2 clearPos = {
 		0,0
 	};
+	int isClear = false;
 	float clearRadius = 1;
 	float clearEndTime = 0;
 	float clearEndSpeed = 1.0f / 60.0f;
@@ -759,6 +822,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 		///////
+
+		// 音フラグ初期化
+		Attack1SEFlag = 0;
+		Attack2SEFlag = 0;
+		Attack3SEFlag = 0;
+		SlashSEFlag = 0;
+		ThunderSEFlag = 0;
+		WaveSEFlag = 0;
+		RangeSEFlag = 0;
+
+		//移動フラグ初期化
+		PlayerDashFlag = 0;
+
 		if (!backStep.isBackStep) {
 			playerPosBox.x = player.translate.x;
 			playerPosBox.y = player.translate.y;
@@ -789,6 +865,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				enemyPerson.translate.y = 48;
 				// フェードアウト開始
 				scene = LASTENEMY2;
+				IsPlayBGM = 2;
 				isFadeOut = true;
 				isFadeIn = false;
 			}
@@ -819,11 +896,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					if (keys[DIK_A] || Novice::IsPressButton(0, kPadButton2)) {
 						player.translate.x -= player.speed.x;
 						playerDir = LEFT;
+						PlayerDashFlag = 1;
 					}
 					// 右に移動
 					if (keys[DIK_D] || Novice::IsPressButton(0, kPadButton3)) {
 						player.translate.x += player.speed.x;
 						playerDir = RIGHT;
+						PlayerDashFlag = 1;
 					}
 					// ジャンプのキー
 					if (keys[DIK_W] && !preKeys[DIK_W] || Novice::IsTriggerButton(0, kPadButton10)) {
@@ -855,6 +934,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 近接攻撃のキー
 					if (keys[DIK_SPACE] && !preKeys[DIK_SPACE] && !playerAttack.isAttack || Novice::IsTriggerButton(0, kPadButton11)) {
+						Attack1SEFlag = 1;
 						playerAttack.isAttack = true;
 					}
 				}
@@ -875,10 +955,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 						// enemy本体とplayerの近接攻撃の当たり判定
 						if ((player.translate.x + player.size / 2) > enemyPerson.translate.x - (enemyPerson.size / 2) && player.translate.x - player.size / 2 < (enemyPerson.translate.x + (enemyPerson.size / 2))
 							&& (player.translate.y + player.size / 2) > enemyPerson.translate.y - enemyPerson.size / 2 && (player.translate.y - player.size / 2) < enemyPerson.translate.y + enemyPerson.size / 2) {
-							player.hp -= 1;
-							if (player.frame <= 60) {
-								player.isMultiHit = true;
-								player.isDamage = true;
+							if (!isClear) {
+								player.hp -= 1;
+								if (player.frame <= 60) {
+									player.isMultiHit = true;
+									player.isDamage = true;
+								}
 							}
 						}
 					}
@@ -914,7 +996,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				// 当たり判定の処理
 				if (playerAttack.isAttack) {
 					playerAttack.frame++;
-					playerAttack.color = RED;
 					// 攻撃が多段ヒットするのでフラグで止める
 					if (!playerAttack.isMultiHit) {
 						// 人型enemy本体とplayerの近接攻撃の当たり判定
@@ -981,19 +1062,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			isTutorialSpace = false;
 			if (keys[DIK_SPACE] && !preKeys[DIK_SPACE]) {
 				scene = GUIDE;
+				IsPlayBGM = 2;
 			}
-#pragma region デバッグ用のキー
 			enemyPersonPattern = NONE_P;
-			if (!keys[DIK_1] && preKeys[DIK_1]) {
-				scene = GUIDE;
-			}
-			if (!keys[DIK_2] && preKeys[DIK_2]) {
-				scene = LASTENEMY1;
-			}
-			if (!keys[DIK_3] && preKeys[DIK_3]) {
-				scene = LASTENEMY2;
-			}
-#pragma endregion
 			break;
 		case GUIDE:
 			if (isTutorialRight) {
@@ -1025,6 +1096,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					if (keys[DIK_SPACE] && !preKeys[DIK_SPACE] || Novice::IsTriggerButton(0, kPadButton11)) {
 						isTutorialSpace = false;
 						scene = LASTENEMY1;
+						IsPlayBGM = 2;
 					}
 				}
 			}
@@ -1118,6 +1190,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					teleport.frame++;
 					if (teleport.frame >= 3 && teleport.frame <= 20) {
 						teleport.isTeleport = true;
+						if (teleport.frame == 3) {
+							TeleportEffectX = enemyPerson.translate.x - 64;
+							TeleportEffectY = (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight;
+							TeleportAnimCount = 0;
+						}
 					}
 					if (teleport.isTeleport) {
 						if (playerDir == RIGHT) {
@@ -1244,6 +1321,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 					// 1撃目
 					if (normalAttack.frame >= 30 && normalAttack.frame <= 40) {
+						if (normalAttack.frame == 30) {
+							Attack1SEFlag = 1;
+						}
 						normalAttack.isAttack = true;
 						enemyAnim.AttackAnimFlag = 1;
 						if (enemyDir == RIGHT_E) {
@@ -1255,6 +1335,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 2撃目
 					if (normalAttack.frame >= 60 && normalAttack.frame <= 70) {
+						if (normalAttack.frame == 60) {
+							Attack2SEFlag = 1;
+						}
 						normalAttack.isAttack = true;
 						enemyAnim.AttackAnimFlag = 2;
 						if (enemyDir == RIGHT_E) {
@@ -1266,6 +1349,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 3撃目
 					if (normalAttack.frame >= 80 && normalAttack.frame <= 90) {
+						if (normalAttack.frame == 80) {
+							Attack3SEFlag = 1;
+						}
 						normalAttack.isAttack = true;
 						enemyAnim.AttackAnimFlag = 3;
 						if (enemyDir == RIGHT_E) {
@@ -1317,6 +1403,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 					// 1撃目
 					if (behindAttack.frame >= 30 && behindAttack.frame <= 40) {
+						if (behindAttack.frame == 30) {
+							Attack1SEFlag = 1;
+						}
 						behindAttack.isBehindAttack = true;
 						enemyAnim.AttackAnimFlag = 1;
 						if (enemyDir == RIGHT_E) {
@@ -1328,6 +1417,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 2撃目
 					if (behindAttack.frame >= 60 && behindAttack.frame <= 70) {
+						if (behindAttack.frame == 60) {
+							Attack2SEFlag = 1;
+						}
 						behindAttack.isBehindAttack = true;
 						enemyAnim.AttackAnimFlag = 2;
 						if (enemyDir == RIGHT_E) {
@@ -1339,6 +1431,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 3撃目
 					if (behindAttack.frame >= 80 && behindAttack.frame <= 90) {
+						if (behindAttack.frame == 80) {
+							Attack3SEFlag = 1;
+						}
 						behindAttack.isBehindAttack = true;
 						enemyAnim.AttackAnimFlag = 3;
 						if (enemyDir == RIGHT_E) {
@@ -1388,6 +1483,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 
 					if (longAttack.frame >= 15) {
+						if (longAttack.frame == 15) {
+							SlashSEFlag = 1;
+						}
 						longAttack.isAttack = true;
 						if (static_cast<float>(kWindowWidth) / 2 <= enemyPerson.translate.x) {
 							longAttack.translate.x -= longAttack.speed.x;
@@ -1433,6 +1531,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 
 					if (rangeAttack.frame >= 25) {
+						if (rangeAttack.frame == 25) {
+							RangeSEFlag = 1;
+						}
 						if (static_cast<float>(kWindowWidth) / 2 >= rangeAttack.drawSwordPos.x) {
 							enemyPerson.translate.x += enemyPerson.speed.x;
 						}
@@ -1501,6 +1602,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 							isShockWaveJump = false;
 						}
 						if (count == 1) {
+							WaveSEFlag = 1;
 							shockWave[0].isAttack = true;
 							shockWave[1].isAttack = true;
 							for (int i = 0; i < 2; i++) {
@@ -1623,6 +1725,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 
 					if (thounder[thounderCount].frame >= 40 && thounder[thounderCount].frame <= 43) {
+						if (thounder[thounderCount].frame == 40) {
+							ThunderSEFlag = 1;
+						}
 						thounder[thounderCount].isThounder = true;
 					}
 					// 初期化
@@ -1666,6 +1771,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			if (player.hp <= 0) {
 				player.isAlive = false;
 				scene = GAMEOVER;
+				IsPlayBGM = 2;
 			}
 
 			// 形態変化
@@ -1769,6 +1875,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				if (enemyPersonPattern == TELEPORT_P) {
 					teleport.frame++;
 					if (teleport.frame >= 3 && teleport.frame <= 20) {
+						if (teleport.frame == 3) {
+							TeleportEffectX = enemyPerson.translate.x - 64;
+							TeleportEffectY = (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight;
+							TeleportAnimCount = 0;
+						}
 						teleport.isTeleport = true;
 					}
 					if (teleport.isTeleport) {
@@ -1891,6 +2002,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 1撃目
 					if (normalAttack.frame >= 30 && normalAttack.frame <= 40) {
+						if (normalAttack.frame == 30) {
+							Attack1SEFlag = 1;
+						}
+						enemyAnim.AttackAnimFlag = 1;
 						normalAttack.isAttack = true;
 						if (enemyDir == RIGHT_E) {
 							enemyPerson.translate.x += 0.5f;
@@ -1901,6 +2016,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 2撃目
 					if (normalAttack.frame >= 60 && normalAttack.frame <= 70) {
+						if (normalAttack.frame == 60) {
+							Attack2SEFlag = 1;
+						}
+						enemyAnim.AttackAnimFlag = 2;
 						normalAttack.isAttack = true;
 						if (enemyDir == RIGHT_E) {
 							enemyPerson.translate.x += 0.5f;
@@ -1911,6 +2030,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 3撃目
 					if (normalAttack.frame >= 80 && normalAttack.frame <= 90) {
+						if (normalAttack.frame == 80) {
+							Attack3SEFlag = 1;
+						}
+						enemyAnim.AttackAnimFlag = 3;
 						normalAttack.isAttack = true;
 						if (enemyDir == RIGHT_E) {
 							enemyPerson.translate.x += 10.0f;
@@ -1957,6 +2080,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 1撃目
 					if (behindAttack.frame >= 30 && behindAttack.frame <= 40) {
+						if (behindAttack.frame == 30) {
+							Attack1SEFlag = 1;
+						}
+						enemyAnim.AttackAnimFlag = 1;
 						behindAttack.isBehindAttack = true;
 						if (enemyDir == RIGHT_E) {
 							enemyPerson.translate.x += 0.5f;
@@ -1967,6 +2094,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 2撃目
 					if (behindAttack.frame >= 60 && behindAttack.frame <= 70) {
+						if (behindAttack.frame == 60) {
+							Attack2SEFlag = 1;
+						}
+						enemyAnim.AttackAnimFlag = 2;
 						behindAttack.isBehindAttack = true;
 						if (enemyDir == RIGHT_E) {
 							enemyPerson.translate.x += 0.5f;
@@ -1977,6 +2108,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					// 3撃目
 					if (behindAttack.frame >= 80 && behindAttack.frame <= 90) {
+						if (behindAttack.frame == 80) {
+							Attack3SEFlag = 1;
+						}
+						enemyAnim.AttackAnimFlag = 3;
 						behindAttack.isBehindAttack = true;
 						if (enemyDir == RIGHT_E) {
 							enemyPerson.translate.x += 10.0f;
@@ -2024,6 +2159,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 
 					if (longAttack.frame >= 40) {
+						if (longAttack.frame == 40) {
+							SlashSEFlag = 1;
+						}
 						longAttack.isAttack = true;
 						if (static_cast<float>(kWindowWidth) / 2 <= enemyPerson.translate.x) {
 							longAttack.translate.x -= longAttack.speed.x;
@@ -2070,6 +2208,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 
 					if (rangeAttack.frame >= 25) {
+						if (rangeAttack.frame == 25) {
+							RangeSEFlag = 1;
+						}
 						if (static_cast<float>(kWindowWidth) / 2 >= rangeAttack.drawSwordPos.x) {
 							enemyPerson.translate.x += enemyPerson.speed.x;
 						}
@@ -2139,6 +2280,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 							isShockWaveJump = false;
 						}
 						if (count == 1) {
+							WaveSEFlag = 1;
 							shockWave[0].isAttack = true;
 							shockWave[1].isAttack = true;
 						}
@@ -2258,6 +2400,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 
 					if (thounder[thounderCount].frame >= 40 && thounder[thounderCount].frame <= 43) {
+						if (thounder[thounderCount].frame == 40) {
+							ThunderSEFlag = 1;
+						}
 						thounder[thounderCount].isThounder = true;
 					}
 					// 初期化
@@ -2357,6 +2502,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			if (player.hp <= 0) {
 				player.isAlive = false;
 				scene = GAMEOVER;
+				IsPlayBGM = 2;
 			}
 			// 人型の敵
 			if (enemyPerson.hp <= 0) {
@@ -2365,6 +2511,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			// クリア画面への移行
 			if (!enemyPerson.isAlive) {
+				isClear = true;
 				clearPos.x = enemyPerson.translate.x;
 				clearPos.y = enemyPerson.translate.y;
 
@@ -2372,7 +2519,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				EaseIn(clearEndTime, clearEndSpeed, clearRadius, 0.0f, kWindowWidth);
 
 				if (clearEndTime >= 3.0f) {
+					isClear = false;
 					scene = CLEAR;
+					IsPlayBGM = 2;
 				}
 			}
 			break;
@@ -2447,6 +2596,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			player.isAlive = true;
 			if (!keys[DIK_SPACE] && preKeys[DIK_SPACE]) {
 				scene = TITLE;
+				IsPlayBGM = 2;
 			}
 #pragma endregion
 
@@ -2523,6 +2673,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			player.isAlive = true;
 			if (!keys[DIK_SPACE] && preKeys[DIK_SPACE]) {
 				scene = TITLE;
+				IsPlayBGM = 2;
 			}
 #pragma endregion
 
@@ -2559,6 +2710,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		thunderAnimCount++;
 		if (thunderAnimCount >= 4 * thunderAnimSpeed) {
 			thunderAnimCount = 0;
+		}
+
+		if (PlayerDashFlag) {
+			playerAnim.DashAnimCount++;
+			if (playerAnim.DashAnimCount >= 8 * playerAnim.DashAnimSpeed) {
+				playerAnim.DashAnimCount = 0;
+			}
+		}
+
+		if (teleport.isTeleport) {
+			TeleportAnimCount++;
+			if (TeleportAnimCount >= 4 * TeleportAnimSpeed) {
+				TeleportAnimCount = 0;
+			}
 		}
 
 		if (behindAttack.isBehindAttack) {
@@ -2611,7 +2776,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				else {
 					enemyAnim.Attack1Range = (enemyAnim.Attack1AnimCount / enemyAnim.Attack1AnimSpeed) * 128;
 				}
-				if (enemyAnim.Attack1AnimCount >= 10) {
+				if (enemyAnim.Attack1AnimCount >= 20) {
 					enemyAnim.Attack1AnimCount = 0;
 					enemyAnim.AttackAnimFlag = 0;
 				}
@@ -2624,7 +2789,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				else {
 					enemyAnim.Attack2Range = (enemyAnim.Attack2AnimCount / enemyAnim.Attack2AnimSpeed) * 128;
 				}
-				if (enemyAnim.Attack2AnimCount >= 20) {
+				if (enemyAnim.Attack2AnimCount >= 30) {
 					enemyAnim.Attack2AnimCount = 0;
 					enemyAnim.AttackAnimFlag = 0;
 				}
@@ -2673,12 +2838,36 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//パーティクル
 		for (int i = 0; i < kParticleMax; i++) {
 			if (particle[i].isDo) {
-				Novice::DrawBox(particle[i].pos.x, particle[i].pos.y, 10, 10, 0, RED, kFillModeSolid);
+				Novice::DrawSprite(particle[i].pos.x, particle[i].pos.y, ParticleTexture, 1, 1, 0, WHITE);
 			}
+		}
+
+		//音
+		if (Attack1SEFlag) {
+			Novice::PlayAudio(Attack1SE, 0, 0.3);
+		}
+		if (Attack2SEFlag) {
+			Novice::PlayAudio(Attack2SE, 0, 0.3);
+		}
+		if (Attack3SEFlag) {
+			Novice::PlayAudio(Attack3SE, 0, 0.3);
+		}
+		if (SlashSEFlag) {
+			Novice::PlayAudio(SlashSE, 0, 0.3);
+		}
+		if (ThunderSEFlag) {
+			Novice::PlayAudio(ThunderSE, 0, 0.3);
+		}
+		if (WaveSEFlag) {
+			Novice::PlayAudio(WaveSE, 0, 0.3);
+		}
+		if (RangeSEFlag) {
+			Novice::PlayAudio(RangeSE, 0, 0.3);
 		}
 
 		// player
 		if (scene != TITLE && scene != GAMEOVER && scene != CLEAR) {
+			Novice::DrawSprite(0, 0, BGTexture, 1, 1, 0, WHITE);
 			// 本体
 			if (player.isAlive) {
 				if (player.isJump) {
@@ -2733,6 +2922,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 						);
 					}
 				}
+				else if (PlayerDashFlag) {
+					if (playerDir) {
+						Novice::DrawQuad(
+							player.translate.x + player.size, (player.translate.y + player.size) * -1 + kWindowHeight,
+							player.translate.x - player.size, (player.translate.y + player.size) * -1 + kWindowHeight,
+							player.translate.x + player.size, (player.translate.y - player.size) * -1 + kWindowHeight,
+							player.translate.x - player.size, (player.translate.y - player.size) * -1 + kWindowHeight,
+							(playerAnim.DashAnimCount / playerAnim.DashAnimSpeed) * 128, 0,
+							128, 128,
+							PlayerDashTexture,
+							player.color
+						);
+					}
+					else {
+						Novice::DrawQuad(
+							player.translate.x - player.size, (player.translate.y + player.size) * -1 + kWindowHeight,
+							player.translate.x + player.size, (player.translate.y + player.size) * -1 + kWindowHeight,
+							player.translate.x - player.size, (player.translate.y - player.size) * -1 + kWindowHeight,
+							player.translate.x + player.size, (player.translate.y - player.size) * -1 + kWindowHeight,
+							(playerAnim.DashAnimCount / playerAnim.DashAnimSpeed) * 128, 0,
+							128, 128,
+							PlayerDashTexture,
+							player.color
+						);
+					}
+				}
 				else {
 					/*Novice::DrawQuad(
 						player.translate.x - player.size, (player.translate.y - player.size) * -1 + kWindowHeight,
@@ -2771,22 +2986,40 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 			}
 			// 攻撃
-			if (playerAttack.isAttack) {
-				Novice::DrawQuad(
-					playerAttack.translate.x - playerAttack.size, (playerAttack.translate.y - playerAttack.size) * -1 + kWindowHeight,
-					playerAttack.translate.x + playerAttack.size, (playerAttack.translate.y - playerAttack.size) * -1 + kWindowHeight,
-					playerAttack.translate.x - playerAttack.size, (playerAttack.translate.y + playerAttack.size) * -1 + kWindowHeight,
-					playerAttack.translate.x + playerAttack.size, (playerAttack.translate.y + playerAttack.size) * -1 + kWindowHeight,
-					0, 0,
-					128, 128,
-					attackGh,
-					playerAttack.color
-				);
+			if (playerDir == RIGHT) {
+				if (playerAttack.isAttack) {
+					Novice::DrawQuad(
+						playerAttack.translate.x - playerAttack.size, (playerAttack.translate.y + playerAttack.size) * -1 + kWindowHeight,
+						playerAttack.translate.x + playerAttack.size, (playerAttack.translate.y + playerAttack.size) * -1 + kWindowHeight,
+						playerAttack.translate.x - playerAttack.size, (playerAttack.translate.y - playerAttack.size) * -1 + kWindowHeight,
+						playerAttack.translate.x + playerAttack.size, (playerAttack.translate.y - playerAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						playerNormalAttackGh,
+						playerAttack.color
+					);
+				}
+			}
+			else if (playerDir == LEFT) {
+				if (playerAttack.isAttack) {
+					Novice::DrawQuad(
+						playerAttack.translate.x + playerAttack.size, (playerAttack.translate.y + playerAttack.size) * -1 + kWindowHeight,
+						playerAttack.translate.x - playerAttack.size, (playerAttack.translate.y + playerAttack.size) * -1 + kWindowHeight,
+						playerAttack.translate.x + playerAttack.size, (playerAttack.translate.y - playerAttack.size) * -1 + kWindowHeight,
+						playerAttack.translate.x - playerAttack.size, (playerAttack.translate.y - playerAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						playerNormalAttackGh,
+						playerAttack.color
+					);
+				}
 			}
 		}
 
 		switch (scene) {
 		case TITLE:
+			Novice::DrawSprite(0, 0, TitleBGTexture, 1, 1, 0, WHITE);
+			Novice::DrawSprite(440, 200, TitleTexture, 1, 1, 0, WHITE);
 			// PRSS SPACE
 			Novice::DrawQuad(
 				enemyPerson.translate.x - 512 - enemyPerson.size * 2, (enemyPerson.translate.y + 200 + enemyPerson.size * 2) * -1 + kWindowHeight,
@@ -2820,9 +3053,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				tutorialAttackGh[1],
 				WHITE - pressSpaceAlpha
 			);
-
-			// デバッグ文字
-			Novice::ScreenPrintf(0, 10, "Press keys   SPACE:GUIDE  2:LASTENEMY1  3:LASTENEMY2 ");
 			break;
 		case GUIDE:
 			// 右
@@ -3272,32 +3502,67 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 
 			// 近接攻撃
-			if (normalAttack.isAttack) {
-				Novice::DrawQuad(
-					normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
-					normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
-					normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
-					normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
-					0, 0,
-					128, 128,
-					attackGh,
-					normalAttack.color
-				);
+			if (enemyDir == RIGHT_E) {
+				if (normalAttack.isAttack) {
+					Novice::DrawQuad(
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						normalAttack.color
+					);
+				}
+			}
+			else if (enemyDir == LEFT_E) {
+				if (normalAttack.isAttack) {
+					Novice::DrawQuad(
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						normalAttack.color
+					);
+				}
 			}
 
-
+			if (teleport.isTeleport) {
+				Novice::DrawSpriteRect(TeleportEffectX, TeleportEffectY, (TeleportAnimCount / TeleportAnimSpeed) * 128, 0, 128, 128, TeleportTexture, 0.25, 1, 0, WHITE);
+			}
+			
 			// 背後から攻撃
-			if (behindAttack.isBehindAttack) {
-				Novice::DrawQuad(
-					behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
-					behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
-					behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
-					behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
-					0, 0,
-					128, 128,
-					attackGh,
-					behindAttack.color
-				);
+			if (enemyDir == RIGHT_E) {
+				if (behindAttack.isBehindAttack) {
+					Novice::DrawQuad(
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						behindAttack.color
+					);
+				}
+			}
+			else if (enemyDir == LEFT_E) {
+				if (behindAttack.isBehindAttack) {
+					Novice::DrawQuad(
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						behindAttack.color
+					);
+				}
 			}
 			// 範囲攻撃
 			if (rangeAttack.isAttack) {
@@ -3306,24 +3571,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					rangeAttack.translate.x + static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y - rangeAttack.size) * -1 + kWindowHeight,
 					rangeAttack.translate.x - static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y + rangeAttack.size) * -1 + kWindowHeight,
 					rangeAttack.translate.x + static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y + rangeAttack.size) * -1 + kWindowHeight,
-					0, 0,
+					(RangeAttackAnimCount / RangeAttackAnimSpeed) * 1280, 0,
 					1280, 128,
-					attackGh,
-					rangeAttack.color
+					BeamTexture,
+					WHITE
 				);
 			}
 			// 衝撃波
 			for (int i = 0; i < 2; i++) {
 				if (shockWave[i].isAttack) {
 					Novice::DrawQuad(
-						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
-						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
 						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y + shockWave[i].size * 2) * -1 + kWindowHeight,
 						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y + shockWave[i].size * 2) * -1 + kWindowHeight,
+						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
+						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
 						0, 0,
 						64, 128,
-						attackGh,
-						RED
+						WaveTexture,
+						WHITE
 					);
 				}
 			}
@@ -3411,69 +3676,502 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					WHITE
 				);
 			}
-			// デバッグ文字
-			Novice::ScreenPrintf(0, 10, "Press keys    1:JUMP 2:BACKSTEP 3:DUSH 4:TELEPORT 5:SHOCKWAVE 6:THOUNDER");
 			break;
 		case LASTENEMY2:
 			// enemy
 			if (shake.isShake) {
 				if (enemyPerson.isAlive) {
 					if (!teleport.isTeleport) {
-						Novice::DrawQuad(
-							enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size + shake.randPos.y) * -1 + kWindowHeight,
-							enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size + shake.randPos.y) * -1 + kWindowHeight,
-							enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size + shake.randPos.y) * -1 + kWindowHeight,
-							enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size + shake.randPos.y) * -1 + kWindowHeight,
-							0, 0,
-							128, 128,
-							playerGh,
-							enemyPerson.color - enemyCarrentAlpha
-						);
+						// 近接攻撃
+						if ((enemyAnim.AttackAnimFlag == 1)) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack1Range, 0,
+									128, 128,
+									EnemyAttack1Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack1Range, 0,
+									128, 128,
+									EnemyAttack1Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+						}
+						else if ((enemyAnim.AttackAnimFlag == 2)) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack2Range, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack2Range, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+						}
+						else if ((enemyAnim.AttackAnimFlag == 3)) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack3Range, 0,
+									128, 128,
+									EnemyAttack3Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack3Range, 0,
+									128, 128,
+									EnemyAttack3Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+
+						}
+						else if (longAttack.frame >= 15) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									768, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									768, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+						}
+						else if (longAttack.frame < 15 && longAttack.frame >= 1) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+						}
+						else if (enemyPerson.isJump) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyJumpTexture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyJumpTexture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+						}
+						else if (backStep.isBackStep) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyBackstepTexture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyBackstepTexture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+						}
+						else {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									(enemyAnim.WaitAnimCount / enemyAnim.WaitAnimSpeed) * 128, 0,
+									128, 128,
+									EnemyWaitTexture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size + shake.randPos.x, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									(enemyAnim.WaitAnimCount / enemyAnim.WaitAnimSpeed) * 128, 0,
+									128, 128,
+									EnemyWaitTexture,
+									enemyPerson.color - enemyCarrentAlpha
+								);
+							}
+						}
 					}
 				}
 			}
 			else {
 				if (enemyPerson.isAlive) {
 					if (!teleport.isTeleport) {
-						Novice::DrawQuad(
-							enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
-							enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
-							enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
-							enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
-							0, 0,
-							128, 128,
-							playerGh,
-							enemyPerson.color - enemyCarrentAlpha
-						);
+						// 近接攻撃
+						if ((enemyAnim.AttackAnimFlag == 1)) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack1Range, 0,
+									128, 128,
+									EnemyAttack1Texture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack1Range, 0,
+									128, 128,
+									EnemyAttack1Texture,
+									enemyPerson.color
+								);
+							}
+						}
+						else if ((enemyAnim.AttackAnimFlag == 2)) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack2Range, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack2Range, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color
+								);
+							}
+						}
+						else if ((enemyAnim.AttackAnimFlag == 3)) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack3Range, 0,
+									128, 128,
+									EnemyAttack3Texture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyAnim.Attack3Range, 0,
+									128, 128,
+									EnemyAttack3Texture,
+									enemyPerson.color
+								);
+							}
+
+						}
+						else if (longAttack.frame >= 15) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									768, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									768, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color
+								);
+							}
+						}
+						else if (longAttack.frame < 15 && longAttack.frame >= 1) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyAttack2Texture,
+									enemyPerson.color
+								);
+							}
+						}
+						else if (enemyPerson.isJump) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyJumpTexture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyJumpTexture,
+									enemyPerson.color
+								);
+							}
+						}
+						else if (backStep.isBackStep) {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyBackstepTexture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									0, 0,
+									128, 128,
+									EnemyBackstepTexture,
+									enemyPerson.color
+								);
+							}
+						}
+						else {
+							if (enemyDir == LEFT_E) {
+								Novice::DrawQuad(
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									(enemyAnim.WaitAnimCount / enemyAnim.WaitAnimSpeed) * 128, 0,
+									128, 128,
+									EnemyWaitTexture,
+									enemyPerson.color
+								);
+							}
+							else {
+								Novice::DrawQuad(
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y + enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x - enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									enemyPerson.translate.x + enemyPerson.size, (enemyPerson.translate.y - enemyPerson.size) * -1 + kWindowHeight,
+									(enemyAnim.WaitAnimCount / enemyAnim.WaitAnimSpeed) * 128, 0,
+									128, 128,
+									EnemyWaitTexture,
+									enemyPerson.color
+								);
+							}
+						}
 					}
 				}
 			}
 			// 近接攻撃
-			if (normalAttack.isAttack) {
-				Novice::DrawQuad(
-					normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
-					normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
-					normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
-					normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
-					0, 0,
-					128, 128,
-					attackGh,
-					normalAttack.color
-				);
+			if (enemyDir == RIGHT_E) {
+				if (normalAttack.isAttack) {
+					Novice::DrawQuad(
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						normalAttack.color
+					);
+				}
+			}
+			else if (enemyDir == LEFT_E) {
+				if (normalAttack.isAttack) {
+					Novice::DrawQuad(
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y + normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x + normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						normalAttack.translate.x - normalAttack.size, (normalAttack.translate.y - normalAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						normalAttack.color
+					);
+				}
+			}
+			if (teleport.isTeleport) {
+				Novice::DrawSpriteRect(TeleportEffectX, TeleportEffectY, (TeleportAnimCount / TeleportAnimSpeed) * 128, 0, 128, 128, TeleportTexture, 0.25, 1, 0, WHITE);
 			}
 
 			// 背後から攻撃
-			if (behindAttack.isBehindAttack) {
-				Novice::DrawQuad(
-					behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
-					behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
-					behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
-					behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
-					0, 0,
-					128, 128,
-					attackGh,
-					behindAttack.color
-				);
+			if (enemyDir == RIGHT_E) {
+				if (behindAttack.isBehindAttack) {
+					Novice::DrawQuad(
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						behindAttack.color
+					);
+				}
+			}
+			else if (enemyDir == LEFT_E) {
+				if (behindAttack.isBehindAttack) {
+					Novice::DrawQuad(
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y + behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x + behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						behindAttack.translate.x - behindAttack.size, (behindAttack.translate.y - behindAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						128, 128,
+						enemyNormalAttackGh,
+						behindAttack.color
+					);
+				}
 			}
 			// 範囲攻撃
 			if (rangeAttack.isAttack) {
@@ -3482,52 +4180,67 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					rangeAttack.translate.x + static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y - rangeAttack.size) * -1 + kWindowHeight,
 					rangeAttack.translate.x - static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y + rangeAttack.size) * -1 + kWindowHeight,
 					rangeAttack.translate.x + static_cast<float>(kWindowWidth) / 2, (rangeAttack.translate.y + rangeAttack.size) * -1 + kWindowHeight,
-					0, 0,
+					(RangeAttackAnimCount / RangeAttackAnimSpeed) * 1280, 0,
 					1280, 128,
-					attackGh,
-					rangeAttack.color
+					BeamTexture,
+					WHITE
 				);
 			}
 			// 衝撃波
 			for (int i = 0; i < 2; i++) {
 				if (shockWave[i].isAttack) {
 					Novice::DrawQuad(
-						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
-						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
 						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y + shockWave[i].size * 2) * -1 + kWindowHeight,
 						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y + shockWave[i].size * 2) * -1 + kWindowHeight,
+						shockWave[i].translate.x - shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
+						shockWave[i].translate.x + shockWave[i].size, (shockWave[i].translate.y - shockWave[i].size * 2) * -1 + kWindowHeight,
 						0, 0,
 						64, 128,
-						attackGh,
-						RED
+						WaveTexture,
+						WHITE
 					);
 				}
 			}
 			// 遠距離攻撃
 			if (longAttack.isAttack) {
-				Novice::DrawQuad(
-					longAttack.translate.x - longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
-					longAttack.translate.x + longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
-					longAttack.translate.x - longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
-					longAttack.translate.x + longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
-					0, 0,
-					64, 64,
-					attackGh,
-					RED
-				);
+				if (enemyDir == LEFT_E) {
+					Novice::DrawQuad(
+						longAttack.translate.x + longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
+						longAttack.translate.x - longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
+						longAttack.translate.x + longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
+						longAttack.translate.x - longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						64, 64,
+						EnemySlashTexture,
+						WHITE
+					);
+				}
+				else {
+					Novice::DrawQuad(
+						longAttack.translate.x - longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
+						longAttack.translate.x + longAttack.size, (longAttack.translate.y + longAttack.size) * -1 + kWindowHeight,
+						longAttack.translate.x - longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
+						longAttack.translate.x + longAttack.size, (longAttack.translate.y - longAttack.size) * -1 + kWindowHeight,
+						0, 0,
+						64, 64,
+						EnemySlashTexture,
+						WHITE
+					);
+				}
+
 			}
 			// 落雷
 			for (int i = 0; i < 10; i++) {
 				if (thounder[i].isThounder) {
 					Novice::DrawQuad(
-						thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
-						thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
-						thounder[i].translate.x - thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
-						thounder[i].translate.x + thounder[i].size, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
-						0, 0,
-						64, 720,
-						attackGh,
-						RED
+						thounder[i].translate.x - thounder[i].size - 64, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
+						thounder[i].translate.x + thounder[i].size + 64, (thounder[i].translate.y - thounder[i].size * 6) * -1 + kWindowHeight,
+						thounder[i].translate.x - thounder[i].size - 64, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
+						thounder[i].translate.x + thounder[i].size + 64, (thounder[i].translate.y + thounder[i].size * 6) * -1 + kWindowHeight,
+						(thunderAnimCount / thunderAnimSpeed) * 128, 0,
+						128, 720,
+						thunderTexture,
+						WHITE
 					);
 				}
 			}
@@ -3540,8 +4253,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					flash.translate.x + flash.size, (flash.translate.y + flash.size) * -1 + kWindowHeight,
 					0, 0,
 					32, 32,
-					attackGh,
-					RED
+					FlashTexture,
+					WHITE
 				);
 			}
 			// フラッシュ状態
@@ -3592,14 +4305,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					WHITE
 				);
 			}
-
-			// デバッグ文字
-			Novice::ScreenPrintf(0, 10, "Press keys    1:JUMP 2:BACKSTEP 3:DUSH 4:TELEPORT 5:SHOCKWAVE 6:THOUNDER 7:FLASH");
-			Novice::ScreenPrintf(0, 30, "%d", player.hp);
-			Novice::ScreenPrintf(0, 50, "%d", enemyPerson.hp);
-			Novice::ScreenPrintf(0, 70, "%f", distance);
 			break;
 		case CLEAR:
+			Novice::DrawSprite(0, 0, TitleBGTexture, 1, 1, 0, WHITE);
+			Novice::DrawSprite(437, 107, GameClearTexture, 1, 1, 0, WHITE);
 			// PRSS SPACE
 			Novice::DrawQuad(
 				enemyPerson.translate.x - 512 - enemyPerson.size * 2, (enemyPerson.translate.y + 200 + enemyPerson.size * 2) * -1 + kWindowHeight,
@@ -3635,6 +4344,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			);
 			break;
 		case GAMEOVER:
+			Novice::DrawSprite(0, 0, TitleBGTexture, 1, 1, 0, WHITE);
+			Novice::DrawSprite(477, 107, GameOverTexture, 1, 1, 0, WHITE);
 			// PRSS SPACE
 			Novice::DrawQuad(
 				enemyPerson.translate.x - 512 - enemyPerson.size * 2, (enemyPerson.translate.y + 200 + enemyPerson.size * 2) * -1 + kWindowHeight,
@@ -3701,6 +4412,58 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// 第二形態
 		if (isSecondForm) {
 			Novice::DrawBox(0, 0, kWindowWidth, kWindowHeight, 0.0f, BLACK - formCarrentAlpha, kFillModeSolid);
+		}
+
+		if (IsPlayBGM == 2) {
+			Novice::StopAudio(TitleBGM_B);
+			Novice::StopAudio(Enemy1BGM_B);
+			Novice::StopAudio(Enemy2BGM_B);
+			Novice::StopAudio(GameOverBGM_B);
+			Novice::StopAudio(GameClearBGM_B);
+			IsPlayBGM = 0;
+		}
+
+		switch (scene) {
+		case TITLE:
+			if (!IsPlayBGM) {
+				if (TitleBGM_B == -1 || Novice::IsPlayingAudio(TitleBGM_B) == 0) {
+					TitleBGM_B = Novice::PlayAudio(TitleBGM, 1, 0.2);
+				}
+				IsPlayBGM = 1;
+			}
+			break;
+		case LASTENEMY1:
+			if (!IsPlayBGM) {
+				if (Enemy1BGM_B == -1 || Novice::IsPlayingAudio(Enemy1BGM_B) == 0) {
+					Enemy1BGM_B = Novice::PlayAudio(Enemy1BGM, 1, 0.2);
+				}
+				IsPlayBGM = 1;
+			}
+			break;
+		case LASTENEMY2:
+			if (!IsPlayBGM) {
+				if (Enemy2BGM_B == -1 || Novice::IsPlayingAudio(Enemy2BGM_B) == 0) {
+					Enemy2BGM_B = Novice::PlayAudio(Enemy2BGM, 1, 0.2);
+				}
+				IsPlayBGM = 1;
+			}
+			break;
+		case GAMEOVER:
+			if (!IsPlayBGM) {
+				if (GameOverBGM_B == -1 || Novice::IsPlayingAudio(GameOverBGM_B) == 0) {
+					GameOverBGM_B = Novice::PlayAudio(GameOverBGM, 1, 0.2);
+				}
+				IsPlayBGM = 1;
+			}
+			break;
+		case CLEAR:
+			if (!IsPlayBGM) {
+				if (GameClearBGM_B == -1 || Novice::IsPlayingAudio(GameClearBGM_B) == 0) {
+					GameClearBGM_B = Novice::PlayAudio(GameClearBGM, 1, 0.2);
+				}
+				IsPlayBGM = 1;
+			}
+			break;
 		}
 		///
 		/// ↑描画処理ここまで
