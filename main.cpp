@@ -1060,7 +1060,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			isTutorialRight = true;
 			isTutorialAttack = false;
 			isTutorialSpace = false;
-			if (keys[DIK_SPACE] && !preKeys[DIK_SPACE]) {
+			if (keys[DIK_SPACE] && !preKeys[DIK_SPACE] || Novice::IsTriggerButton(0, kPadButton11)) {
 				scene = GUIDE;
 				IsPlayBGM = 2;
 			}
@@ -1103,33 +1103,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			break;
 		case LASTENEMY1:
-#pragma region デバッグ用のキー
-			if (!keys[DIK_1] && preKeys[DIK_1]) {
-				NoneTime = 60;
-				enemyPersonPattern = JUMP_P;
-			}
-			if (!keys[DIK_2] && preKeys[DIK_2]) {
-				NoneTime = 60;
-				enemyPersonPattern = BACKSTEP_P;
-			}
-			if (!keys[DIK_3] && preKeys[DIK_3]) {
-				NoneTime = 60;
-				enemyPersonPattern = DUSH_P;
-			}
-			if (!keys[DIK_4] && preKeys[DIK_4]) {
-				NoneTime = 60;
-				enemyPersonPattern = TELEPORT_P;
-			}
-			if (!keys[DIK_5] && preKeys[DIK_5]) {
-				NoneTime = 60;
-				enemyPersonPattern = SHOCKWAVE_P;
-			}
-			if (!keys[DIK_6] && preKeys[DIK_6]) {
-				NoneTime = 60;
-				enemyPersonPattern = THOUNDER_P;
-			}
-#pragma endregion
-
 			if (!isSecondForm) {
 				// enemyの向き
 				if (player.translate.x <= enemyPerson.translate.x) {
@@ -1782,37 +1755,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			break;
 		case LASTENEMY2:
-#pragma region デバッグ用のキー
-			if (!keys[DIK_1] && preKeys[DIK_1]) {
-				NoneTime = 60;
-				enemyPersonPattern = JUMP_P;
-			}
-			if (!keys[DIK_2] && preKeys[DIK_2]) {
-				NoneTime = 60;
-				enemyPersonPattern = BACKSTEP_P;
-			}
-			if (!keys[DIK_3] && preKeys[DIK_3]) {
-				NoneTime = 60;
-				enemyPersonPattern = DUSH_P;
-			}
-			if (!keys[DIK_4] && preKeys[DIK_4]) {
-				NoneTime = 60;
-				enemyPersonPattern = TELEPORT_P;
-			}
-			if (!keys[DIK_5] && preKeys[DIK_5]) {
-				NoneTime = 60;
-				enemyPersonPattern = SHOCKWAVE_P;
-			}
-			if (!keys[DIK_6] && preKeys[DIK_6]) {
-				NoneTime = 60;
-				enemyPersonPattern = THOUNDER_P;
-			}
-			if (!keys[DIK_7] && preKeys[DIK_7]) {
-				NoneTime = 60;
-				enemyPersonPattern = FLASH_P;
-			}
-#pragma endregion
-
 			if (!isSecondForm) {
 				// enemyの向き
 				if (player.translate.x <= enemyPerson.translate.x) {
@@ -2594,7 +2536,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			player.translate.y = player.size;
 			player.hp = 3;
 			player.isAlive = true;
-			if (!keys[DIK_SPACE] && preKeys[DIK_SPACE]) {
+			if (!keys[DIK_SPACE] && preKeys[DIK_SPACE] || Novice::IsTriggerButton(0, kPadButton11)) {
 				scene = TITLE;
 				IsPlayBGM = 2;
 			}
@@ -2671,12 +2613,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			player.translate.y = player.size;
 			player.hp = 3;
 			player.isAlive = true;
-			if (!keys[DIK_SPACE] && preKeys[DIK_SPACE]) {
+			if (!keys[DIK_SPACE] && preKeys[DIK_SPACE] || Novice::IsTriggerButton(0, kPadButton11)) {
 				scene = TITLE;
 				IsPlayBGM = 2;
 			}
 #pragma endregion
-
 			break;
 		}
 
